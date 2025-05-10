@@ -18,19 +18,35 @@ const Login = () => {
     try {
       // Login the user
       const userData = await login(username, password);
+      console.log("Login response data:", userData);
 
-      // Check if user is admin
-      try {
-        const isAdmin = await checkAdminStatus();
-        localStorage.setItem('isAdmin', isAdmin.toString());
-      } catch (adminError) {
-        console.error("Error checking admin status:", adminError);
-        // Default to non-admin if check fails
-        localStorage.setItem('isAdmin', 'false');
+      // Store username explicitly
+      localStorage.setItem('username', username);
+
+      // Check if admin status exists in userData
+      if (userData && userData.is_admin !== undefined) {
+        console.log("Admin status from login response:", userData.is_admin);
+        localStorage.setItem('isAdmin', userData.is_admin.toString());
+        console.log("Set isAdmin in localStorage to:", userData.is_admin.toString());
+      } else {
+        console.log("No admin status in login response, checking separately");
+
+        // Fallback to checking admin status separately
+        try {
+          const isAdmin = await checkAdminStatus();
+          console.log("Admin status from separate check:", isAdmin);
+          localStorage.setItem('isAdmin', isAdmin.toString());
+          console.log("Set isAdmin in localStorage to:", isAdmin.toString());
+        } catch (adminError) {
+          console.error("Error checking admin status:", adminError);
+          // Default to non-admin if check fails
+          localStorage.setItem('isAdmin', 'false');
+          console.log("Set isAdmin in localStorage to: false (due to error)");
+        }
       }
 
-      // Navigate to dashboard
-      navigate('/dashboard');
+      // Force refresh to update navigation
+      window.location.href = '/dashboard';
     } catch (error) {
       setError(error.message || 'Login failed. Please try again.');
     } finally {

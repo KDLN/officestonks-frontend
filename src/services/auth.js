@@ -41,6 +41,11 @@ export const register = async (username, password) => {
     localStorage.setItem('token', data.token);
     localStorage.setItem('userId', data.user_id);
 
+    // Store username if available
+    if (data.username) {
+      localStorage.setItem('username', data.username);
+    }
+
     // Store admin status if available
     if (data.is_admin !== undefined) {
       console.log("Admin status received:", data.is_admin);
@@ -88,6 +93,11 @@ export const login = async (username, password) => {
     localStorage.setItem('token', data.token);
     localStorage.setItem('userId', data.user_id);
 
+    // Store username if available
+    if (data.username) {
+      localStorage.setItem('username', data.username);
+    }
+
     // Store admin status if available
     if (data.is_admin !== undefined) {
       console.log("Admin status received:", data.is_admin);
@@ -108,6 +118,7 @@ export const logout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('userId');
   localStorage.removeItem('isAdmin');
+  localStorage.removeItem('username');
   window.location.href = '/login';
 };
 
@@ -162,7 +173,12 @@ export const getUserId = () => {
 export const isAdmin = () => {
   const adminStatus = localStorage.getItem('isAdmin');
   console.log("Checking isAdmin from localStorage:", adminStatus);
-  return adminStatus === 'true';
+
+  // Convert to boolean explicitly
+  const result = adminStatus === 'true' || adminStatus === '1';
+  console.log("Admin check result:", result);
+
+  return result;
 };
 
 // Set admin status
