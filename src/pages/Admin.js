@@ -14,11 +14,19 @@ const Admin = () => {
     setLoading(true);
     setMessage('');
     setError('');
-    
+
     try {
-      await resetStockPrices();
-      setMessage('Stock prices have been reset successfully.');
+      console.log('Admin UI: Calling resetStockPrices()');
+      const result = await resetStockPrices();
+      console.log('Admin UI: resetStockPrices result:', result);
+
+      if (result && result.error) {
+        setError(result.message || 'Failed to reset stock prices');
+      } else {
+        setMessage(result?.message || 'Stock prices have been reset successfully.');
+      }
     } catch (err) {
+      console.error('Admin UI: Reset stocks error:', err);
       setError(`Failed to reset stock prices: ${err.message}`);
     } finally {
       setLoading(false);
@@ -30,11 +38,19 @@ const Admin = () => {
     setLoading(true);
     setMessage('');
     setError('');
-    
+
     try {
-      await clearAllChats();
-      setMessage('All chat messages have been cleared successfully.');
+      console.log('Admin UI: Calling clearAllChats()');
+      const result = await clearAllChats();
+      console.log('Admin UI: clearAllChats result:', result);
+
+      if (result && result.error) {
+        setError(result.message || 'Failed to clear chat messages');
+      } else {
+        setMessage(result?.message || 'All chat messages have been cleared successfully.');
+      }
     } catch (err) {
+      console.error('Admin UI: Clear chats error:', err);
       setError(`Failed to clear chat messages: ${err.message}`);
     } finally {
       setLoading(false);

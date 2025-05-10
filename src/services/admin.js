@@ -16,10 +16,12 @@ const API_URL = isLocalhost
   : 'https://web-production-1e26.up.railway.app/api';  // Use absolute URL in production
 
 // Admin specific URL that goes through the CORS proxy to avoid CORS issues
+// IMPORTANT: When in production, ALL admin endpoints MUST go through the CORS proxy
 const ADMIN_URL = isLocalhost
   ? '/api/admin'  // Use relative URL when running locally
   : `${CORS_PROXY_URL}/admin`;  // Use CORS proxy in production for admin endpoints
 
+console.log('Using ADMIN_URL:', ADMIN_URL);
 console.log('Admin service using API URL:', API_URL);
 
 // Check if current user has admin privileges
@@ -94,7 +96,11 @@ export const resetStockPrices = async () => {
   try {
     const token = getToken();
 
-    const response = await fetch(`${ADMIN_URL}/stocks/reset?token=${token}`, {
+    // Log the URL being used
+    const requestUrl = `${ADMIN_URL}/stocks/reset?token=${token}`;
+    console.log('Resetting stock prices with URL:', requestUrl);
+
+    const response = await fetch(requestUrl, {
       method: 'GET', // Use GET method for the CORS proxy
       headers: {
         'Content-Type': 'application/json',
@@ -176,8 +182,16 @@ export const updateUser = async (userId, data) => {
   try {
     const token = getToken();
 
-    // For the PUT request, we'll still use the direct API because the CORS proxy currently only handles GET
-    const response = await fetch(`${API_URL}/admin/users/${userId}`, {
+    // For the PUT request, we need to handle differently
+    // In local development, use the API directly
+    // In production, we should adapt how we handle this based on CORS proxy capabilities
+    const requestUrl = isLocalhost
+      ? `${API_URL}/admin/users/${userId}`
+      : `${API_URL}/admin/users/${userId}`;
+
+    console.log('Updating user with URL:', requestUrl);
+
+    const response = await fetch(requestUrl, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -220,8 +234,14 @@ export const deleteUser = async (userId) => {
   try {
     const token = getToken();
 
-    // Similar to updateUser, we'll keep using the direct API for DELETE
-    const response = await fetch(`${API_URL}/admin/users/${userId}`, {
+    // Similar to updateUser, handle DELETE requests
+    const requestUrl = isLocalhost
+      ? `${API_URL}/admin/users/${userId}`
+      : `${API_URL}/admin/users/${userId}`;
+
+    console.log('Deleting user with URL:', requestUrl);
+
+    const response = await fetch(requestUrl, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
