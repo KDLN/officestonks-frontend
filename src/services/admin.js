@@ -104,8 +104,9 @@ export const getAllUsers = async () => {
         id: 1,
         username: 'admin',
         email: 'admin@example.com',
-        balance: 10000,
-        is_admin: true
+        cash_balance: 10000,
+        is_admin: true,
+        created_at: new Date().toISOString()
       }];
     }
   } catch (error) {
