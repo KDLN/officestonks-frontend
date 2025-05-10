@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getUserPortfolio } from '../services/stock';
-import { getTransactionHistory } from '../services/stock';
+import { getUserPortfolio, getTransactionHistory } from '../services/stock';
+import { initWebSocket, addListener, closeWebSocket } from '../services/websocket';
 import Navigation from '../components/Navigation';
 import './Portfolio.css';
 
@@ -32,6 +32,75 @@ const Portfolio = () => {
     };
 
     fetchPortfolio();
+
+    // Initialize WebSocket connection
+    initWebSocket();
+
+    // Listen for stock updates to refresh data
+    const removeListener = addListener('*', (message) => {
+      // Process stock update message
+      if (message.type === 'stock_update' || (message.id && message.current_price)) {
+        // Extract stock_id and price - handle different message formats
+        const stock_id = message.stock_id || message.id;
+        const price = message.price || message.current_price;
+
+        if (!stock_id || !price) {
+          console.log('Missing required fields in message:', message);
+          return;
+        }
+
+        // Update portfolio stocks if affected
+        setPortfolio(prevPortfolio => {
+          if (!prevPortfolio || !prevPortfolio.portfolio_items) {
+            return prevPortfolio;
+          }
+
+          // Update portfolio items if the stock is in portfolio
+          const updatedItems = prevPortfolio.portfolio_items.map(item => {
+            if (!item || !item.stock) return item;
+
+            if (item.stock_id === stock_id) {
+              // Track price direction for visual indicator
+              const priceDirection = item.stock.current_price < price ? 'up' :
+                                     item.stock.current_price > price ? 'down' : '';
+              const updatedStock = {
+                ...item.stock,
+                current_price: price,
+                priceChange: priceDirection
+              };
+              return {
+                ...item,
+                stock: updatedStock,
+                priceChange: priceDirection
+              };
+            }
+            return item;
+          });
+
+          // Recalculate stock value
+          const newStockValue = updatedItems.reduce(
+            (total, item) => {
+              if (!item || !item.stock) return total;
+              return total + (item.quantity * item.stock.current_price);
+            },
+            0
+          );
+
+          return {
+            ...prevPortfolio,
+            portfolio_items: updatedItems,
+            stock_value: newStockValue,
+            total_value: prevPortfolio.cash_balance + newStockValue
+          };
+        });
+      }
+    });
+
+    // Clean up on unmount
+    return () => {
+      removeListener();
+      closeWebSocket();
+    };
   }, []);
 
   // Calculate cost basis and average price for each stock
@@ -206,7 +275,11 @@ const Portfolio = () => {
                           </Link>
                         </td>
                         <td>{quantity}</td>
-                        <td>{formatCurrency(stock.current_price)}</td>
+                        <td className={`price ${item.priceChange || ''}`}>
+                          {formatCurrency(stock.current_price)}
+                          {item.priceChange === 'up' && <span className="arrow up">▲</span>}
+                          {item.priceChange === 'down' && <span className="arrow down">▼</span>}
+                        </td>
                         <td>{formatCurrency(averageCost)}</td>
                         <td>{formatCurrency(currentValue)}</td>
                         <td>{formatCurrency(costBasisValue)}</td>

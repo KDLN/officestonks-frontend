@@ -118,6 +118,43 @@
   color: #e74c3c;
 }
 
+/* Price change indicators */
+.price {
+  position: relative;
+  transition: background-color 1s ease;
+}
+
+.price.up {
+  animation: highlight-green 2s ease;
+}
+
+.price.down {
+  animation: highlight-red 2s ease;
+}
+
+.arrow {
+  font-size: 0.8rem;
+  margin-left: 0.25rem;
+}
+
+.arrow.up {
+  color: #27ae60;
+}
+
+.arrow.down {
+  color: #e74c3c;
+}
+
+@keyframes highlight-green {
+  0% { background-color: rgba(39, 174, 96, 0.3); }
+  100% { background-color: transparent; }
+}
+
+@keyframes highlight-red {
+  0% { background-color: rgba(231, 76, 60, 0.3); }
+  100% { background-color: transparent; }
+}
+
 /* Empty portfolio */
 .empty-portfolio {
   background-color: white;
