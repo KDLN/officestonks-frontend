@@ -1,8 +1,8 @@
 // Authentication service for the frontend
-import { getProxyConfig, PROXY_ENABLED } from './corsProxy';
+import { getProxyConfig, PROXY_ENABLED, createDirectUrl } from './corsProxy';
 
 // Get API URL helpers
-const { createUrl } = getProxyConfig(PROXY_ENABLED);
+const { createUrl } = getProxyConfig();
 
 // Original API URL (for reference only)
 const BASE_URL = process.env.REACT_APP_API_URL || 'https://web-copy-production-5b48.up.railway.app';
@@ -107,23 +107,28 @@ export const getToken = () => {
 // Add auth token to API request
 export const addAuthToRequest = (url, options = {}) => {
   const token = getToken();
+  const config = getProxyConfig();
 
   // Ensure headers object exists
   if (!options.headers) {
     options.headers = {};
   }
 
-  // Add token to Authorization header if available
-  if (token) {
+  // Add token to Authorization header if available and enabled
+  if (token && config.addAuthToHeader) {
     options.headers['Authorization'] = `Bearer ${token}`;
   }
 
-  // Always include credentials
-  options.credentials = 'include';
+  // Set credentials mode based on config
+  if (config.useCredentials) {
+    options.credentials = 'include';
+  } else {
+    options.credentials = 'omit';  // Don't send cookies
+  }
 
   // If there's a token and it's not in the url, add it as a query parameter as well
   // This is for backward compatibility and extra security
-  if (token && !url.includes('token=')) {
+  if (token && config.addAuthToUrl && !url.includes('token=')) {
     const separator = url.includes('?') ? '&' : '?';
     url = `${url}${separator}token=${token}`;
   }
