@@ -65,25 +65,37 @@ export const getAllUsers = async () => {
     const requestUrl = `${CORS_PROXY_URL}/admin/users?token=${token}`;
     console.log('Getting all users from URL (via CORS proxy):', requestUrl);
 
-    // Make the request
+    // Make the request - now using proper CORS mode since backend has been fixed
     const response = await fetch(requestUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-      mode: 'no-cors',
+      credentials: 'include',
+      mode: 'cors',
     });
 
-    // When using no-cors mode, the response is opaque and we can't check response.ok or read contents
-    console.log('Users data request sent (this will not work with no-cors mode)');
-    // This will return mock data that we can display until the CORS issue is resolved server-side
-    return [{
-      id: 1,
-      username: 'admin',
-      email: 'admin@example.com',
-      balance: 10000,
-      is_admin: true
-    }];
+    if (!response.ok) {
+      const statusText = response.statusText || 'Unknown error';
+      console.error(`Failed to fetch users: ${response.status} ${statusText}`);
+      return []; // Return empty array instead of throwing to prevent UI errors
+    }
+
+    // Check if response has content before parsing JSON
+    const text = await response.text();
+    if (!text || text.trim() === '') {
+      console.warn('Empty response from server for getAllUsers');
+      return [];
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (jsonError) {
+      console.error('Error parsing JSON response:', jsonError);
+      console.error('Response text was:', text);
+      // Return empty array instead of throwing to prevent UI errors
+      return [];
+    }
   } catch (error) {
     console.error('Error fetching users:', error);
     // Return empty array instead of re-throwing to prevent UI errors
@@ -104,18 +116,37 @@ export const resetStockPrices = async () => {
     const requestUrl = `${CORS_PROXY_URL}/admin/stocks/reset?token=${token}`;
     console.log('Resetting stock prices with URL (via CORS proxy):', requestUrl);
 
-    // Make the request with no-cors mode to bypass CORS restrictions
+    // Make the request - now using proper CORS mode since backend has been fixed
     const response = await fetch(requestUrl, {
       method: 'POST', // Use POST as specified in the original implementation
       headers: {
         'Content-Type': 'application/json',
       },
-      mode: 'no-cors',
+      credentials: 'include',
+      mode: 'cors',
     });
+    
+    if (!response.ok) {
+      const statusText = response.statusText || 'Unknown error';
+      console.error(`Failed to reset stock prices: ${response.status} ${statusText}`);
+      return { error: true, message: 'Failed to reset stock prices. Please try again.' };
+    }
 
-    // When using no-cors mode, the response is opaque and we can't check response.ok or read contents
-    console.log('Stock prices reset request sent');
-    return { message: 'Stock prices reset successfully' };
+    // Check if response has content before parsing JSON
+    const text = await response.text();
+    if (!text || text.trim() === '') {
+      console.warn('Empty response from server for resetStockPrices');
+      return { message: 'Stock prices reset successfully' };
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (jsonError) {
+      console.error('Error parsing JSON response:', jsonError);
+      console.error('Response text was:', text);
+      // Return a default response so the UI can continue
+      return { message: 'Stock prices reset successfully (response parse error)' };
+    }
   } catch (error) {
     console.error('Error resetting stock prices:', error);
     // Return a user-friendly error message instead of throwing
@@ -136,18 +167,37 @@ export const clearAllChats = async () => {
     const requestUrl = `${CORS_PROXY_URL}/admin/chat/clear?token=${token}`;
     console.log('Clearing chat messages with URL (via CORS proxy):', requestUrl);
 
-    // Make the request with no-cors mode to bypass CORS restrictions
+    // Make the request - now using proper CORS mode since backend has been fixed
     const response = await fetch(requestUrl, {
       method: 'POST', // Use POST as specified in the original implementation
       headers: {
         'Content-Type': 'application/json',
       },
-      mode: 'no-cors',
+      credentials: 'include',
+      mode: 'cors',
     });
 
-    // When using no-cors mode, the response is opaque and we can't check response.ok or read contents
-    console.log('Chat messages clear request sent');
-    return { message: 'Chat messages cleared successfully' };
+    if (!response.ok) {
+      const statusText = response.statusText || 'Unknown error';
+      console.error(`Failed to clear chat messages: ${response.status} ${statusText}`);
+      return { error: true, message: 'Failed to clear chat messages. Please try again.' };
+    }
+
+    // Check if response has content before parsing JSON
+    const text = await response.text();
+    if (!text || text.trim() === '') {
+      console.warn('Empty response from server for clearAllChats');
+      return { message: 'Chat messages cleared successfully' };
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (jsonError) {
+      console.error('Error parsing JSON response:', jsonError);
+      console.error('Response text was:', text);
+      // Return a default response so the UI can continue
+      return { message: 'Chat messages cleared successfully (response parse error)' };
+    }
   } catch (error) {
     console.error('Error clearing chat messages:', error);
     // Return a user-friendly error message instead of throwing
@@ -168,19 +218,38 @@ export const updateUser = async (userId, data) => {
     const requestUrl = `${CORS_PROXY_URL}/admin/users/${userId}?token=${token}`;
     console.log('Updating user with URL (via CORS proxy):', requestUrl);
 
-    // Make the request with no-cors mode to bypass CORS restrictions
+    // Make the request - now using proper CORS mode since backend has been fixed
     const response = await fetch(requestUrl, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
-      mode: 'no-cors',
+      credentials: 'include',
+      mode: 'cors',
     });
 
-    // When using no-cors mode, the response is opaque and we can't check response.ok or read contents
-    console.log('Update user request sent');
-    return { ...data, id: userId, message: 'User updated successfully' };
+    if (!response.ok) {
+      const statusText = response.statusText || 'Unknown error';
+      console.error(`Failed to update user: ${response.status} ${statusText}`);
+      return { error: true, ...data, id: userId, message: 'Failed to update user. Please try again.' };
+    }
+
+    // Check if response has content before parsing JSON
+    const text = await response.text();
+    if (!text || text.trim() === '') {
+      console.warn('Empty response from server for updateUser');
+      return { ...data, id: userId, message: 'User updated successfully' };
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (jsonError) {
+      console.error('Error parsing JSON response:', jsonError);
+      console.error('Response text was:', text);
+      // Return a default response so the UI can continue
+      return { ...data, id: userId, message: 'User updated successfully (response parse error)' };
+    }
   } catch (error) {
     console.error('Error updating user:', error);
     // Return a user-friendly error message instead of throwing
@@ -206,12 +275,31 @@ export const deleteUser = async (userId) => {
       headers: {
         'Content-Type': 'application/json',
       },
-      mode: 'no-cors',
+      credentials: 'include',
+      mode: 'cors',
     });
 
-    // When using no-cors mode, the response is opaque and we can't check response.ok or read contents
-    console.log('Delete user request sent');
-    return { message: 'User deleted successfully' };
+    if (!response.ok) {
+      const statusText = response.statusText || 'Unknown error';
+      console.error(`Failed to delete user: ${response.status} ${statusText}`);
+      return { error: true, message: 'Failed to delete user. Please try again.' };
+    }
+
+    // Check if response has content before parsing JSON
+    const text = await response.text();
+    if (!text || text.trim() === '') {
+      console.warn('Empty response from server for deleteUser');
+      return { message: 'User deleted successfully' };
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (jsonError) {
+      console.error('Error parsing JSON response:', jsonError);
+      console.error('Response text was:', text);
+      // Return a default response so the UI can continue
+      return { message: 'User deleted successfully (response parse error)' };
+    }
   } catch (error) {
     console.error('Error deleting user:', error);
     // Return a user-friendly error message instead of throwing
