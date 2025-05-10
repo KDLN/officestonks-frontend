@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getUserPortfolio, getTransactionHistory, getAllStocks } from '../services/stock';
-import { initWebSocket, addListener, closeWebSocket } from '../services/websocket';
+import { initWebSocket, addListener, closeWebSocket, getLatestPrice } from '../services/websocket';
 import Navigation from '../components/Navigation';
 import Chat from '../components/Chat';
 import './Dashboard.css';
@@ -30,12 +30,45 @@ const Dashboard = () => {
           getTransactionHistory(5), // Get 5 most recent transactions
           getAllStocks()
         ]);
-        
+
+        // Apply cached prices to portfolio items
+        if (portfolioData && portfolioData.portfolio_items) {
+          let updatedStockValue = 0;
+
+          portfolioData.portfolio_items = portfolioData.portfolio_items.map(item => {
+            if (item && item.stock && item.stock_id) {
+              // Get the latest price from cache or use the current price
+              const latestPrice = getLatestPrice(item.stock_id, item.stock.current_price);
+
+              // Update the stock with the latest price
+              item.stock.current_price = latestPrice;
+
+              // Add to the total stock value
+              updatedStockValue += item.quantity * latestPrice;
+            }
+            return item;
+          });
+
+          // Update the portfolio totals
+          portfolioData.stock_value = updatedStockValue;
+          portfolioData.total_value = portfolioData.cash_balance + updatedStockValue;
+        }
+
+        // Apply cached prices to stock list
+        const updatedStocks = stocksData.map(stock => {
+          if (stock && stock.id) {
+            // Get the latest price from cache or use the current price
+            const latestPrice = getLatestPrice(stock.id, stock.current_price);
+            return { ...stock, current_price: latestPrice };
+          }
+          return stock;
+        });
+
         setPortfolio(portfolioData);
         setTransactions(transactionsData);
-        
+
         // Get top 5 stocks by price
-        const sortedStocks = [...stocksData].sort((a, b) => b.current_price - a.current_price);
+        const sortedStocks = [...updatedStocks].sort((a, b) => b.current_price - a.current_price);
         setTopStocks(sortedStocks.slice(0, 5));
         
         setLoading(false);

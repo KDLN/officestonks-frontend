@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getStockById, executeTrade, getUserPortfolio } from '../services/stock';
-import { initWebSocket, addListener, closeWebSocket } from '../services/websocket';
+import { initWebSocket, addListener, closeWebSocket, getLatestPrice } from '../services/websocket';
 import Navigation from '../components/Navigation';
 import './StockDetail.css';
 
@@ -28,7 +28,36 @@ const StockDetail = () => {
           getStockById(stockId),
           getUserPortfolio()
         ]);
-        
+
+        // Apply cached price to stock if available
+        if (stockData && stockData.id) {
+          const latestPrice = getLatestPrice(stockData.id, stockData.current_price);
+          stockData.current_price = latestPrice;
+        }
+
+        // Apply cached prices to portfolio items
+        if (portfolioData && portfolioData.portfolio_items) {
+          let updatedStockValue = 0;
+
+          portfolioData.portfolio_items = portfolioData.portfolio_items.map(item => {
+            if (item && item.stock && item.stock_id) {
+              // Get the latest price from cache or use the current price
+              const latestPrice = getLatestPrice(item.stock_id, item.stock.current_price);
+
+              // Update the stock with the latest price
+              item.stock.current_price = latestPrice;
+
+              // Add to the total stock value
+              updatedStockValue += item.quantity * latestPrice;
+            }
+            return item;
+          });
+
+          // Update the portfolio totals
+          portfolioData.stock_value = updatedStockValue;
+          portfolioData.total_value = portfolioData.cash_balance + updatedStockValue;
+        }
+
         setStock(stockData);
         setPortfolio(portfolioData);
         setLoading(false);

@@ -8,6 +8,9 @@ let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY = 3000; // 3 seconds
 
+// Cache to store latest stock prices across page navigations
+export const stockPriceCache = {};
+
 // Initialize WebSocket connection
 export const initWebSocket = () => {
   if (socket) {
@@ -175,11 +178,22 @@ export const initWebSocket = () => {
 
 // Helper function to process a single parsed message
 function processMessage(message) {
+  // Update stock price cache if it's a stock update
+  if (message.type === 'stock_update' || (message.id && message.current_price)) {
+    const stockId = message.stock_id || message.id;
+    const price = message.price || message.current_price;
+
+    if (stockId && price) {
+      // Store the latest price in cache
+      stockPriceCache[stockId] = price;
+    }
+  }
+
   // Call all listeners for this message type
   if (listeners[message.type]) {
     listeners[message.type].forEach(callback => callback(message));
   }
-  
+
   // Call general listeners
   if (listeners['*']) {
     listeners['*'].forEach(callback => callback(message));
@@ -233,12 +247,17 @@ const reconnect = () => {
     }
     return;
   }
-  
+
   reconnectAttempts++;
-  
+
   reconnectTimer = setTimeout(() => {
     console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
     reconnectTimer = null;
     initWebSocket();
   }, RECONNECT_DELAY);
+};
+
+// Get latest price from cache or use default
+export const getLatestPrice = (stockId, defaultPrice) => {
+  return stockId in stockPriceCache ? stockPriceCache[stockId] : defaultPrice;
 };

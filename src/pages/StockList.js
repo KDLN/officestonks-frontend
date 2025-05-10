@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getAllStocks } from '../services/stock';
-import { initWebSocket, addListener, closeWebSocket } from '../services/websocket';
+import { initWebSocket, addListener, closeWebSocket, getLatestPrice } from '../services/websocket';
 import Navigation from '../components/Navigation';
 import './StockList.css';
 
@@ -18,7 +18,18 @@ const StockList = () => {
     const fetchStocks = async () => {
       try {
         const stocksData = await getAllStocks();
-        setStocks(stocksData);
+
+        // Apply cached prices to stocks
+        const updatedStocks = stocksData.map(stock => {
+          if (stock && stock.id) {
+            // Get the latest price from cache or use the current price
+            const latestPrice = getLatestPrice(stock.id, stock.current_price);
+            return { ...stock, current_price: latestPrice };
+          }
+          return stock;
+        });
+
+        setStocks(updatedStocks);
         setLoading(false);
       } catch (err) {
         setError('Failed to load stocks. Please try again later.');

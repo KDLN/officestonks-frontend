@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getUserPortfolio, getTransactionHistory } from '../services/stock';
-import { initWebSocket, addListener, closeWebSocket } from '../services/websocket';
+import { initWebSocket, addListener, closeWebSocket, getLatestPrice } from '../services/websocket';
 import Navigation from '../components/Navigation';
 import './Portfolio.css';
 
@@ -18,6 +18,30 @@ const Portfolio = () => {
       try {
         setLoading(true);
         const data = await getUserPortfolio();
+
+        // Apply any cached prices to the portfolio items
+        if (data && data.portfolio_items) {
+          let updatedStockValue = 0;
+
+          data.portfolio_items = data.portfolio_items.map(item => {
+            if (item && item.stock && item.stock_id) {
+              // Get the latest price from cache or use the current price
+              const latestPrice = getLatestPrice(item.stock_id, item.stock.current_price);
+
+              // Update the stock with the latest price
+              item.stock.current_price = latestPrice;
+
+              // Add to the total stock value
+              updatedStockValue += item.quantity * latestPrice;
+            }
+            return item;
+          });
+
+          // Update the portfolio totals
+          data.stock_value = updatedStockValue;
+          data.total_value = data.cash_balance + updatedStockValue;
+        }
+
         setPortfolio(data);
         setLoading(false);
 
