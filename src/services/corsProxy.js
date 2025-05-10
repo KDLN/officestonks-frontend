@@ -28,7 +28,7 @@ export const createProxiedUrl = (endpoint) => {
 };
 
 // Function to help migrate existing code to use the proxy
-export const useProxy = (enabled = true) => {
+export const getProxyConfig = (enabled = true) => {
   // If proxy is not enabled, just return the original API URL functions
   if (!enabled) {
     return {
@@ -36,7 +36,7 @@ export const useProxy = (enabled = true) => {
       proxyEnabled: false
     };
   }
-  
+
   return {
     createUrl: createProxiedUrl,
     proxyEnabled: true

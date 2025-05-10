@@ -1,8 +1,8 @@
 // Authentication service for the frontend
-import { useProxy, PROXY_ENABLED } from './corsProxy';
+import { getProxyConfig, PROXY_ENABLED } from './corsProxy';
 
 // Get API URL helpers
-const { createUrl } = useProxy(PROXY_ENABLED);
+const { createUrl } = getProxyConfig(PROXY_ENABLED);
 
 // Original API URL (for reference only)
 const BASE_URL = process.env.REACT_APP_API_URL || 'https://web-copy-production-5b48.up.railway.app';
