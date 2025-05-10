@@ -29,11 +29,16 @@ export const initWebSocket = () => {
 
   // Replace http/https with ws/wss
   const wsBase = apiUrl.replace(/^http/, 'ws');
+  const wsBase2 = wsBase.replace(/^https/, 'wss');
 
-  // Create the WebSocket URL
-  const wsUrl = `${wsBase}/ws?token=${token}`;
+  // Create the WebSocket URL with token for authentication
+  const wsUrl = `${wsBase2}/ws?token=${token}`;
 
   console.log('Connecting to WebSocket:', wsUrl);
+
+  // Add custom headers in the constructor for WebSocket
+  // Note: Browsers often don't allow custom headers in WebSocket connections
+  // so we append the token as a query parameter
   socket = new WebSocket(wsUrl);
 
   // Make socket and addListener available globally for other components
@@ -154,6 +159,14 @@ export const initWebSocket = () => {
   // Connection error
   socket.addEventListener('error', (error) => {
     console.error('WebSocket error:', error);
+
+    // Add more detailed error logging to help debug CORS issues
+    if (error && error.target && error.target.readyState === WebSocket.CLOSED) {
+      console.error('WebSocket connection failed - possible CORS issue or server unavailable');
+      console.error('If this is a CORS error, ensure the backend allows WebSocket connections from this origin');
+      console.error('Current origin:', window.location.origin);
+    }
+
     // Socket will automatically close after error
   });
 

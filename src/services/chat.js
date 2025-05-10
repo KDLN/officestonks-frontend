@@ -1,5 +1,5 @@
 // Chat service for frontend
-import { getToken } from './auth';
+import { addAuthToRequest } from './auth';
 
 // Make sure to include the correct API path
 const BASE_URL = process.env.REACT_APP_API_URL || 'https://web-copy-production-5b48.up.railway.app';
@@ -9,19 +9,20 @@ console.log("Chat service using API URL:", API_URL);
 // Get recent chat messages
 export const getRecentMessages = async (limit = 50) => {
   try {
-    const token = getToken();
-
-    const response = await fetch(`${API_URL}/chat/messages?limit=${limit}`, {
+    // Prepare request config with auth
+    const { url, options } = addAuthToRequest(`${API_URL}/chat/messages?limit=${limit}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
       },
-      credentials: 'include',
     });
 
+    // Make the request
+    const response = await fetch(url, options);
+
     if (!response.ok) {
-      throw new Error('Failed to fetch chat messages');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to fetch chat messages');
     }
 
     return await response.json();
@@ -34,22 +35,23 @@ export const getRecentMessages = async (limit = 50) => {
 // Send a chat message
 export const sendChatMessage = async (message) => {
   try {
-    const token = getToken();
-
-    const response = await fetch(`${API_URL}/chat/send`, {
+    // Prepare request config with auth
+    const { url, options } = addAuthToRequest(`${API_URL}/chat/send`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({
         message,
       }),
-      credentials: 'include',
     });
 
+    // Make the request
+    const response = await fetch(url, options);
+
     if (!response.ok) {
-      throw new Error('Failed to send chat message');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to send chat message');
     }
 
     return await response.json();

@@ -9,14 +9,17 @@ console.log("Using API URL:", API_URL);
 // Register a new user
 export const register = async (username, password) => {
   try {
-    const response = await fetch(`${API_URL}/auth/register`, {
+    // Prepare request config with auth
+    const { url, options } = addAuthToRequest(`${API_URL}/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ username, password }),
-      credentials: 'include',
     });
+
+    // Make the request
+    const response = await fetch(url, options);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -38,14 +41,17 @@ export const register = async (username, password) => {
 // Login an existing user
 export const login = async (username, password) => {
   try {
-    const response = await fetch(`${API_URL}/auth/login`, {
+    // Prepare request config with auth
+    const { url, options } = addAuthToRequest(`${API_URL}/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ username, password }),
-      credentials: 'include',
     });
+
+    // Make the request
+    const response = await fetch(url, options);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -79,6 +85,33 @@ export const isAuthenticated = () => {
 // Get authentication token
 export const getToken = () => {
   return localStorage.getItem('token');
+};
+
+// Add auth token to API request
+export const addAuthToRequest = (url, options = {}) => {
+  const token = getToken();
+
+  // Ensure headers object exists
+  if (!options.headers) {
+    options.headers = {};
+  }
+
+  // Add token to Authorization header if available
+  if (token) {
+    options.headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  // Always include credentials
+  options.credentials = 'include';
+
+  // If there's a token and it's not in the url, add it as a query parameter as well
+  // This is for backward compatibility and extra security
+  if (token && !url.includes('token=')) {
+    const separator = url.includes('?') ? '&' : '?';
+    url = `${url}${separator}token=${token}`;
+  }
+
+  return { url, options };
 };
 
 // Get user ID

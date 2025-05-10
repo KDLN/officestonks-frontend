@@ -1,5 +1,5 @@
 // User service for frontend
-import { getToken } from './auth';
+import { addAuthToRequest } from './auth';
 
 // Make sure to include the correct API path
 const BASE_URL = process.env.REACT_APP_API_URL || 'https://web-copy-production-5b48.up.railway.app';
@@ -9,16 +9,20 @@ console.log("User service using API URL:", API_URL);
 // Get leaderboard data
 export const getLeaderboard = async (limit = 10) => {
   try {
-    const response = await fetch(`${API_URL}/users/leaderboard?limit=${limit}`, {
+    // Prepare request config with auth
+    const { url, options } = addAuthToRequest(`${API_URL}/users/leaderboard?limit=${limit}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-      credentials: 'include',
     });
 
+    // Make the request
+    const response = await fetch(url, options);
+
     if (!response.ok) {
-      throw new Error('Failed to fetch leaderboard');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to fetch leaderboard');
     }
 
     return await response.json();
@@ -31,19 +35,20 @@ export const getLeaderboard = async (limit = 10) => {
 // Get current user's profile
 export const getUserProfile = async () => {
   try {
-    const token = getToken();
-
-    const response = await fetch(`${API_URL}/users/me`, {
+    // Prepare request config with auth
+    const { url, options } = addAuthToRequest(`${API_URL}/users/me`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
       },
-      credentials: 'include',
     });
 
+    // Make the request
+    const response = await fetch(url, options);
+
     if (!response.ok) {
-      throw new Error('Failed to fetch user profile');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to fetch user profile');
     }
 
     return await response.json();

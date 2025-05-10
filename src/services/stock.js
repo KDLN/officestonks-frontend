@@ -1,5 +1,5 @@
 // Stock market service for frontend
-import { getToken } from './auth';
+import { addAuthToRequest } from './auth';
 
 // Make sure to include the correct API path
 const BASE_URL = process.env.REACT_APP_API_URL || 'https://web-copy-production-5b48.up.railway.app';
@@ -9,16 +9,20 @@ console.log("Stock service using API URL:", API_URL);
 // Get all available stocks
 export const getAllStocks = async () => {
   try {
-    const response = await fetch(`${API_URL}/stocks`, {
+    // Prepare request config with auth
+    const { url, options } = addAuthToRequest(`${API_URL}/stocks`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-      credentials: 'include',
     });
 
+    // Make the request
+    const response = await fetch(url, options);
+
     if (!response.ok) {
-      throw new Error('Failed to fetch stocks');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to fetch stocks');
     }
 
     return await response.json();
@@ -31,16 +35,20 @@ export const getAllStocks = async () => {
 // Get a specific stock by ID
 export const getStockById = async (stockId) => {
   try {
-    const response = await fetch(`${API_URL}/stocks/${stockId}`, {
+    // Prepare request config with auth
+    const { url, options } = addAuthToRequest(`${API_URL}/stocks/${stockId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-      credentials: 'include',
     });
 
+    // Make the request
+    const response = await fetch(url, options);
+
     if (!response.ok) {
-      throw new Error('Failed to fetch stock');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to fetch stock');
     }
 
     return await response.json();
@@ -53,19 +61,20 @@ export const getStockById = async (stockId) => {
 // Get the user's portfolio
 export const getUserPortfolio = async () => {
   try {
-    const token = getToken();
-    
-    const response = await fetch(`${API_URL}/portfolio`, {
+    // Prepare request config with auth
+    const { url, options } = addAuthToRequest(`${API_URL}/portfolio`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
       },
-      credentials: 'include',
     });
 
+    // Make the request
+    const response = await fetch(url, options);
+
     if (!response.ok) {
-      throw new Error('Failed to fetch portfolio');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to fetch portfolio');
     }
 
     return await response.json();
@@ -78,21 +87,21 @@ export const getUserPortfolio = async () => {
 // Execute a trade (buy or sell)
 export const executeTrade = async (stockId, quantity, action) => {
   try {
-    const token = getToken();
-    
-    const response = await fetch(`${API_URL}/trading`, {
+    // Prepare request config with auth
+    const { url, options } = addAuthToRequest(`${API_URL}/trading`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({
         stock_id: stockId,
         quantity: quantity,
         action: action, // 'buy' or 'sell'
       }),
-      credentials: 'include',
     });
+
+    // Make the request
+    const response = await fetch(url, options);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -109,19 +118,20 @@ export const executeTrade = async (stockId, quantity, action) => {
 // Get transaction history
 export const getTransactionHistory = async (limit = 50, offset = 0) => {
   try {
-    const token = getToken();
-    
-    const response = await fetch(`${API_URL}/transactions?limit=${limit}&offset=${offset}`, {
+    // Prepare request config with auth
+    const { url, options } = addAuthToRequest(`${API_URL}/transactions?limit=${limit}&offset=${offset}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
       },
-      credentials: 'include',
     });
 
+    // Make the request
+    const response = await fetch(url, options);
+
     if (!response.ok) {
-      throw new Error('Failed to fetch transaction history');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to fetch transaction history');
     }
 
     return await response.json();
