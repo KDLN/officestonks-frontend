@@ -66,12 +66,13 @@ export const getAllUsers = async () => {
     console.log('Getting all users from URL (via CORS proxy):', requestUrl);
 
     try {
-      // First try with regular CORS mode
+      // Use regular CORS mode - now with wildcard origin support
       const response = await fetch(requestUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
+        // Remove credentials since they're not compatible with wildcard origins
         mode: 'cors',
       });
 
@@ -128,12 +129,13 @@ export const resetStockPrices = async () => {
     console.log('Resetting stock prices with URL (via CORS proxy):', requestUrl);
 
     try {
-      // First try with regular CORS mode
+      // Use regular CORS mode - now with wildcard origin support
       const response = await fetch(requestUrl, {
         method: 'POST', // Use POST as specified in the original implementation
         headers: {
           'Content-Type': 'application/json',
         },
+        // Remove credentials since they're not compatible with wildcard origins
         mode: 'cors',
       });
 
@@ -189,12 +191,13 @@ export const clearAllChats = async () => {
     console.log('Clearing chat messages with URL (via CORS proxy):', requestUrl);
 
     try {
-      // First try with regular CORS mode
+      // Use regular CORS mode - now with wildcard origin support
       const response = await fetch(requestUrl, {
         method: 'POST', // Use POST as specified in the original implementation
         headers: {
           'Content-Type': 'application/json',
         },
+        // Remove credentials since they're not compatible with wildcard origins
         mode: 'cors',
       });
 
@@ -250,13 +253,14 @@ export const updateUser = async (userId, data) => {
     console.log('Updating user with URL (via CORS proxy):', requestUrl);
 
     try {
-      // First try with regular CORS mode
+      // Use regular CORS mode - now with wildcard origin support
       const response = await fetch(requestUrl, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
+        // Remove credentials since they're not compatible with wildcard origins
         mode: 'cors',
       });
 
@@ -313,12 +317,13 @@ export const deleteUser = async (userId) => {
     console.log('Deleting user with URL (via CORS proxy):', requestUrl);
 
     try {
-      // First try with regular CORS mode
+      // Use regular CORS mode - now with wildcard origin support
       const response = await fetch(requestUrl, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
+        // Remove credentials since they're not compatible with wildcard origins
         mode: 'cors',
       });
 
