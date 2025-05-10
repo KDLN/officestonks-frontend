@@ -1,10 +1,11 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { logout } from '../services/auth';
+import { logout, isAdmin } from '../services/auth';
 import './Navigation.css';
 
 const Navigation = () => {
   const navigate = useNavigate();
+  const userIsAdmin = isAdmin();
 
   const handleLogout = () => {
     logout();
@@ -29,6 +30,11 @@ const Navigation = () => {
         <li>
           <Link to="/leaderboard">Leaderboard</Link>
         </li>
+        {userIsAdmin && (
+          <li>
+            <Link to="/admin" className="admin-link">Admin</Link>
+          </li>
+        )}
         <li>
           <button onClick={handleLogout} className="logout-button">Logout</button>
         </li>

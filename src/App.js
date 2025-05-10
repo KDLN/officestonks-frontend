@@ -11,7 +11,10 @@ import StockDetail from './pages/StockDetail';
 import Leaderboard from './pages/Leaderboard';
 import Transactions from './pages/Transactions';
 import Portfolio from './pages/Portfolio';
+import Admin from './pages/Admin';
+import AdminUsers from './pages/AdminUsers';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
 import { isAuthenticated } from './services/auth';
 
 function App() {
@@ -29,7 +32,11 @@ function App() {
           <Route path="/portfolio" element={<ProtectedRoute element={<Portfolio />} />} />
           <Route path="/leaderboard" element={<ProtectedRoute element={<Leaderboard />} />} />
           <Route path="/transactions" element={<ProtectedRoute element={<Transactions />} />} />
-          
+
+          {/* Admin routes */}
+          <Route path="/admin" element={<AdminRoute element={<Admin />} />} />
+          <Route path="/admin/users" element={<AdminRoute element={<AdminUsers />} />} />
+
           {/* Default redirect */}
           <Route path="*" element={<Navigate to={isAuthenticated() ? "/dashboard" : "/login"} />} />
         </Routes>

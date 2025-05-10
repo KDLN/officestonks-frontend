@@ -41,6 +41,11 @@ export const register = async (username, password) => {
     localStorage.setItem('token', data.token);
     localStorage.setItem('userId', data.user_id);
 
+    // Store admin status if available
+    if (data.is_admin !== undefined) {
+      localStorage.setItem('isAdmin', data.is_admin.toString());
+    }
+
     return data;
   } catch (error) {
     console.error("Registration error:", error);
@@ -80,6 +85,11 @@ export const login = async (username, password) => {
     localStorage.setItem('token', data.token);
     localStorage.setItem('userId', data.user_id);
 
+    // Store admin status if available
+    if (data.is_admin !== undefined) {
+      localStorage.setItem('isAdmin', data.is_admin.toString());
+    }
+
     return data;
   } catch (error) {
     console.error("Login error:", error);
@@ -91,6 +101,7 @@ export const login = async (username, password) => {
 export const logout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('userId');
+  localStorage.removeItem('isAdmin');
   window.location.href = '/login';
 };
 
@@ -139,4 +150,14 @@ export const addAuthToRequest = (url, options = {}) => {
 // Get user ID
 export const getUserId = () => {
   return localStorage.getItem('userId');
+};
+
+// Check if user is admin
+export const isAdmin = () => {
+  return localStorage.getItem('isAdmin') === 'true';
+};
+
+// Set admin status
+export const setAdminStatus = (isAdmin) => {
+  localStorage.setItem('isAdmin', isAdmin.toString());
 };

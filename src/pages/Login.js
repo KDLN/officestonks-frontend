@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { login } from '../services/auth';
+import { checkAdminStatus } from '../services/admin';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -15,7 +16,20 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await login(username, password);
+      // Login the user
+      const userData = await login(username, password);
+
+      // Check if user is admin
+      try {
+        const isAdmin = await checkAdminStatus();
+        localStorage.setItem('isAdmin', isAdmin.toString());
+      } catch (adminError) {
+        console.error("Error checking admin status:", adminError);
+        // Default to non-admin if check fails
+        localStorage.setItem('isAdmin', 'false');
+      }
+
+      // Navigate to dashboard
       navigate('/dashboard');
     } catch (error) {
       setError(error.message || 'Login failed. Please try again.');
