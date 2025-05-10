@@ -15,6 +15,7 @@ export const register = async (username, password) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ username, password }),
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -43,6 +44,7 @@ export const login = async (username, password) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ username, password }),
+      credentials: 'include',
     });
 
     if (!response.ok) {

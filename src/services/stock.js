@@ -14,6 +14,7 @@ export const getAllStocks = async () => {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -35,6 +36,7 @@ export const getStockById = async (stockId) => {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -59,6 +61,7 @@ export const getUserPortfolio = async () => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -88,6 +91,7 @@ export const executeTrade = async (stockId, quantity, action) => {
         quantity: quantity,
         action: action, // 'buy' or 'sell'
       }),
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -113,6 +117,7 @@ export const getTransactionHistory = async (limit = 50, offset = 0) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
+      credentials: 'include',
     });
 
     if (!response.ok) {
