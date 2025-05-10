@@ -17,14 +17,19 @@ export const checkAdminStatus = async () => {
       },
     });
 
+    console.log("Checking admin status at URL:", url);
+
     // Make the request
     const response = await fetch(url, options);
+    console.log("Admin status response status:", response.status);
 
     if (!response.ok) {
+      console.log("Admin status response not OK");
       return false; // Not an admin or error
     }
 
     const data = await response.json();
+    console.log("Admin status response data:", data);
     return data.isAdmin === true;
   } catch (error) {
     console.error('Error checking admin status:', error);

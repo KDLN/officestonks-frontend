@@ -6,6 +6,7 @@ import './Navigation.css';
 const Navigation = () => {
   const navigate = useNavigate();
   const userIsAdmin = isAdmin();
+  console.log("Navigation - User is admin:", userIsAdmin);
 
   const handleLogout = () => {
     logout();

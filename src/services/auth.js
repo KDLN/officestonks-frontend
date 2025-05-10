@@ -43,7 +43,10 @@ export const register = async (username, password) => {
 
     // Store admin status if available
     if (data.is_admin !== undefined) {
+      console.log("Admin status received:", data.is_admin);
       localStorage.setItem('isAdmin', data.is_admin.toString());
+    } else {
+      console.log("No admin status in response");
     }
 
     return data;
@@ -87,7 +90,10 @@ export const login = async (username, password) => {
 
     // Store admin status if available
     if (data.is_admin !== undefined) {
+      console.log("Admin status received:", data.is_admin);
       localStorage.setItem('isAdmin', data.is_admin.toString());
+    } else {
+      console.log("No admin status in response");
     }
 
     return data;
@@ -154,7 +160,9 @@ export const getUserId = () => {
 
 // Check if user is admin
 export const isAdmin = () => {
-  return localStorage.getItem('isAdmin') === 'true';
+  const adminStatus = localStorage.getItem('isAdmin');
+  console.log("Checking isAdmin from localStorage:", adminStatus);
+  return adminStatus === 'true';
 };
 
 // Set admin status
