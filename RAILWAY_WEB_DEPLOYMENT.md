@@ -1,6 +1,6 @@
-# Deploying to Railway via Web UI
+# Deploying to Railway from GitHub Repository
 
-If you prefer to deploy using the Railway web dashboard instead of the CLI, follow these steps:
+The recommended approach is to deploy directly from your GitHub repository to Railway. This enables continuous deployment and keeps your application automatically in sync with your code changes.
 
 ## Step 1: Push Your Code to GitHub
 
