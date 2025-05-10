@@ -1,22 +1,31 @@
 // Authentication service for the frontend
+import { useProxy, PROXY_ENABLED } from './corsProxy';
 
-// API URL
-// Make sure to include the correct API path
+// Get API URL helpers
+const { createUrl } = useProxy(PROXY_ENABLED);
+
+// Original API URL (for reference only)
 const BASE_URL = process.env.REACT_APP_API_URL || 'https://web-copy-production-5b48.up.railway.app';
 const API_URL = `${BASE_URL}/api`;
-console.log("Using API URL:", API_URL);
+console.log("Using API URL:", PROXY_ENABLED ? "CORS Proxy -> " + API_URL : API_URL);
 
 // Register a new user
 export const register = async (username, password) => {
   try {
+    // Create URL with proxy if enabled
+    const endpoint = 'auth/register';
+    const apiUrl = PROXY_ENABLED ? createUrl(endpoint) : `${API_URL}/${endpoint}`;
+
     // Prepare request config with auth
-    const { url, options } = addAuthToRequest(`${API_URL}/auth/register`, {
+    const { url, options } = addAuthToRequest(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ username, password }),
     });
+
+    console.log("Making registration request to:", url);
 
     // Make the request
     const response = await fetch(url, options);
@@ -27,13 +36,14 @@ export const register = async (username, password) => {
     }
 
     const data = await response.json();
-    
+
     // Store token in localStorage
     localStorage.setItem('token', data.token);
     localStorage.setItem('userId', data.user_id);
-    
+
     return data;
   } catch (error) {
+    console.error("Registration error:", error);
     throw error;
   }
 };
@@ -41,14 +51,20 @@ export const register = async (username, password) => {
 // Login an existing user
 export const login = async (username, password) => {
   try {
+    // Create URL with proxy if enabled
+    const endpoint = 'auth/login';
+    const apiUrl = PROXY_ENABLED ? createUrl(endpoint) : `${API_URL}/${endpoint}`;
+
     // Prepare request config with auth
-    const { url, options } = addAuthToRequest(`${API_URL}/auth/login`, {
+    const { url, options } = addAuthToRequest(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ username, password }),
     });
+
+    console.log("Making login request to:", url);
 
     // Make the request
     const response = await fetch(url, options);
@@ -59,13 +75,14 @@ export const login = async (username, password) => {
     }
 
     const data = await response.json();
-    
+
     // Store token in localStorage
     localStorage.setItem('token', data.token);
     localStorage.setItem('userId', data.user_id);
-    
+
     return data;
   } catch (error) {
+    console.error("Login error:", error);
     throw error;
   }
 };
