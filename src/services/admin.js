@@ -1,49 +1,51 @@
 // Admin service for frontend
-import { getToken } from './auth';
+import { getToken, addAuthToRequest } from './auth';
+import { createDirectUrl, getProxyConfig } from './corsProxy';
 
 // Make sure to include the correct API path
 // Check the current hostname to determine if we're running locally
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-// For Railway deployment, check if a CORS proxy is available or use direct path
-// If a proxy is available, admin endpoints will go through the proxy
-const CORS_PROXY_URL = process.env.REACT_APP_CORS_PROXY_URL || 'https://officestonks-cors-proxy.up.railway.app';
+// Configuration - we'll use the same approach as other services
+// Get the configuration from corsProxy to ensure consistent behavior
+const config = getProxyConfig();
 
 // For Railway deployment, we might have different URLs for frontend and backend
-// Use the API URL that matches the environment
-const API_URL = isLocalhost
-  ? '/api'  // Use relative URL when running locally
-  : 'https://web-production-1e26.up.railway.app/api';  // Use absolute URL in production
+// When running locally, use a relative URL for convenience
+const BASE_URL = process.env.REACT_APP_API_URL || 'https://web-production-1e26.up.railway.app';
+const API_URL = isLocalhost ? '/api' : `${BASE_URL}/api`;
 
-// Admin specific URL that goes through the CORS proxy to avoid CORS issues
-// IMPORTANT: When in production, ALL admin endpoints MUST go through the CORS proxy
-const ADMIN_URL = isLocalhost
-  ? '/api/admin'  // Use relative URL when running locally
-  : `${CORS_PROXY_URL}/admin`;  // Use CORS proxy in production for admin endpoints
+// Define CORS proxy URL if we need to use it
+const CORS_PROXY_URL = process.env.REACT_APP_CORS_PROXY_URL || 'https://officestonks-cors-proxy.up.railway.app';
 
-console.log('Using ADMIN_URL:', ADMIN_URL);
+// Use a relative path when local, direct URL when in production
+// This approach should be consistent with the rest of the application
 console.log('Admin service using API URL:', API_URL);
 
 // Check if current user has admin privileges
 export const checkAdminStatus = async () => {
   try {
-    const token = getToken();
-
-    const response = await fetch(`${ADMIN_URL}/status?token=${token}`, {
+    // Prepare request config with auth - consistent with other services
+    const { url, options } = addAuthToRequest(`${API_URL}/admin/status`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-      credentials: 'same-origin', // Don't use 'include' with CORS proxy
-      mode: 'cors',
     });
 
+    console.log('Checking admin status at URL:', url);
+
+    // Make the request
+    const response = await fetch(url, options);
+
     if (!response.ok) {
-      throw new Error('Failed to check admin status');
+      console.log('Admin status response not OK:', response.status);
+      return false;
     }
 
     const data = await response.json();
-    return data.isAdmin;
+    console.log('Admin status response:', data);
+    return data.isAdmin === true;
   } catch (error) {
     console.error('Error checking admin status:', error);
     return false;
@@ -54,19 +56,28 @@ export const checkAdminStatus = async () => {
 export const getAllUsers = async () => {
   try {
     const token = getToken();
+    if (!token) {
+      console.error('No token available for authentication');
+      return [];
+    }
 
-    const response = await fetch(`${ADMIN_URL}/users?token=${token}`, {
+    // Use CORS proxy instead of direct API call
+    const requestUrl = `${CORS_PROXY_URL}/admin/users?token=${token}`;
+    console.log('Getting all users from URL (via CORS proxy):', requestUrl);
+
+    // Make the request
+    const response = await fetch(requestUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-      credentials: 'same-origin',
       mode: 'cors',
     });
 
     if (!response.ok) {
       const statusText = response.statusText || 'Unknown error';
-      throw new Error(`Failed to fetch users: ${response.status} ${statusText}`);
+      console.error(`Failed to fetch users: ${response.status} ${statusText}`);
+      return []; // Return empty array instead of throwing to prevent UI errors
     }
 
     // Check if response has content before parsing JSON
@@ -95,23 +106,28 @@ export const getAllUsers = async () => {
 export const resetStockPrices = async () => {
   try {
     const token = getToken();
+    if (!token) {
+      console.error('No token available for authentication');
+      return { error: true, message: 'No authentication token available. Please log in again.' };
+    }
 
-    // Log the URL being used
-    const requestUrl = `${ADMIN_URL}/stocks/reset?token=${token}`;
-    console.log('Resetting stock prices with URL:', requestUrl);
+    // Use CORS proxy instead of direct API call
+    const requestUrl = `${CORS_PROXY_URL}/admin/stocks/reset?token=${token}`;
+    console.log('Resetting stock prices with URL (via CORS proxy):', requestUrl);
 
+    // Make the request
     const response = await fetch(requestUrl, {
-      method: 'GET', // Use GET method for the CORS proxy
+      method: 'POST', // Use POST as specified in the original implementation
       headers: {
         'Content-Type': 'application/json',
       },
-      credentials: 'same-origin',
       mode: 'cors',
     });
 
     if (!response.ok) {
       const statusText = response.statusText || 'Unknown error';
-      throw new Error(`Failed to reset stock prices: ${response.status} ${statusText}`);
+      console.error(`Failed to reset stock prices: ${response.status} ${statusText}`);
+      return { error: true, message: 'Failed to reset stock prices. Please try again.' };
     }
 
     // Check if response has content before parsing JSON
@@ -140,19 +156,28 @@ export const resetStockPrices = async () => {
 export const clearAllChats = async () => {
   try {
     const token = getToken();
+    if (!token) {
+      console.error('No token available for authentication');
+      return { error: true, message: 'No authentication token available. Please log in again.' };
+    }
 
-    const response = await fetch(`${ADMIN_URL}/chat/clear?token=${token}`, {
-      method: 'GET', // Use GET for the CORS proxy instead of POST
+    // Use CORS proxy instead of direct API call
+    const requestUrl = `${CORS_PROXY_URL}/admin/chat/clear?token=${token}`;
+    console.log('Clearing chat messages with URL (via CORS proxy):', requestUrl);
+
+    // Make the request
+    const response = await fetch(requestUrl, {
+      method: 'POST', // Use POST as specified in the original implementation
       headers: {
         'Content-Type': 'application/json',
       },
-      credentials: 'same-origin',
       mode: 'cors',
     });
 
     if (!response.ok) {
       const statusText = response.statusText || 'Unknown error';
-      throw new Error(`Failed to clear chat messages: ${response.status} ${statusText}`);
+      console.error(`Failed to clear chat messages: ${response.status} ${statusText}`);
+      return { error: true, message: 'Failed to clear chat messages. Please try again.' };
     }
 
     // Check if response has content before parsing JSON
@@ -181,30 +206,29 @@ export const clearAllChats = async () => {
 export const updateUser = async (userId, data) => {
   try {
     const token = getToken();
+    if (!token) {
+      console.error('No token available for authentication');
+      return { error: true, ...data, id: userId, message: 'No authentication token available. Please log in again.' };
+    }
 
-    // For the PUT request, we need to handle differently
-    // In local development, use the API directly
-    // In production, we should adapt how we handle this based on CORS proxy capabilities
-    const requestUrl = isLocalhost
-      ? `${API_URL}/admin/users/${userId}`
-      : `${API_URL}/admin/users/${userId}`;
+    // Use CORS proxy instead of direct API call
+    const requestUrl = `${CORS_PROXY_URL}/admin/users/${userId}?token=${token}`;
+    console.log('Updating user with URL (via CORS proxy):', requestUrl);
 
-    console.log('Updating user with URL:', requestUrl);
-
+    // Make the request
     const response = await fetch(requestUrl, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
       },
-      credentials: 'include',
-      mode: 'cors',
       body: JSON.stringify(data),
+      mode: 'cors',
     });
 
     if (!response.ok) {
       const statusText = response.statusText || 'Unknown error';
-      throw new Error(`Failed to update user: ${response.status} ${statusText}`);
+      console.error(`Failed to update user: ${response.status} ${statusText}`);
+      return { error: true, ...data, id: userId, message: 'Failed to update user. Please try again.' };
     }
 
     // Check if response has content before parsing JSON
@@ -233,27 +257,27 @@ export const updateUser = async (userId, data) => {
 export const deleteUser = async (userId) => {
   try {
     const token = getToken();
+    if (!token) {
+      console.error('No token available for authentication');
+      return { error: true, message: 'No authentication token available. Please log in again.' };
+    }
 
-    // Similar to updateUser, handle DELETE requests
-    const requestUrl = isLocalhost
-      ? `${API_URL}/admin/users/${userId}`
-      : `${API_URL}/admin/users/${userId}`;
-
-    console.log('Deleting user with URL:', requestUrl);
+    // Use CORS proxy instead of direct API call
+    const requestUrl = `${CORS_PROXY_URL}/admin/users/${userId}?token=${token}`;
+    console.log('Deleting user with URL (via CORS proxy):', requestUrl);
 
     const response = await fetch(requestUrl, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
       },
-      credentials: 'include',
       mode: 'cors',
     });
 
     if (!response.ok) {
       const statusText = response.statusText || 'Unknown error';
-      throw new Error(`Failed to delete user: ${response.status} ${statusText}`);
+      console.error(`Failed to delete user: ${response.status} ${statusText}`);
+      return { error: true, message: 'Failed to delete user. Please try again.' };
     }
 
     // Check if response has content before parsing JSON
