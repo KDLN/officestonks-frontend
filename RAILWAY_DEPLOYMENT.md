@@ -1,75 +1,70 @@
 # Deploying the Frontend to Railway
 
-This guide explains how to deploy the OfficeStonks frontend to Railway as a separate service within the same project as the backend.
+This guide explains how to deploy the OfficeStonks frontend to Railway.
 
-## Benefits of Deploying Frontend to Railway
+## Important Note About Railway Limitations
 
-1. **CORS Resolution**: Having both services under the same domain can eliminate CORS issues entirely.
-2. **Simplified Deployment**: Manage both services from one Railway dashboard.
-3. **Shared Environment**: Share environment variables between frontend and backend.
-4. **Performance**: Railway CDN provides fast delivery of static assets.
+Railway currently doesn't offer path-based routing between services on the same hostname. This means you cannot route `/api/*` to one service and other paths to another service directly in Railway.
 
-## Deployment Steps
+## Deployment Options
 
-### 1. Create a New Service in Existing Project
+### Option 1: Deploy with CORS Proxy (Simplest Approach)
 
 1. Go to your Railway dashboard
-2. Open the existing OfficeStonks project
-3. Click "New Service" → "GitHub Repo"
-4. Select your frontend repository
+2. Create a new service for the frontend (separate from backend)
+3. Configure environment variables:
+   ```
+   REACT_APP_API_URL=https://web-copy-production-5b48.up.railway.app
+   REACT_APP_USE_CORS_PROXY=true
+   ```
+4. Deploy the service
 
-### 2. Configure Environment Variables
+This approach uses our integrated CORS proxy to bypass CORS restrictions.
 
-Add the following environment variables:
+### Option 2: Deploy a Reverse Proxy Service (Most Robust)
 
-```
-REACT_APP_API_URL=https://your-railway-project.up.railway.app
-REACT_APP_USE_CORS_PROXY=false
-```
+We've created a separate reverse proxy service that can route requests appropriately:
 
-* If using a shared domain, you can use a relative path for API_URL:
-  ```
-  REACT_APP_API_URL=/api
-  ```
+1. Deploy the backend service
+2. Deploy the frontend service
+3. Deploy the reverse proxy service with environment variables:
+   ```
+   BACKEND_URL=https://your-backend-service.up.railway.app
+   FRONTEND_URL=https://your-frontend-service.up.railway.app
+   ```
+4. Use the reverse proxy service's URL as the main application URL
 
-### 3. Configure Domain Settings
+The reverse proxy will route `/api/*` requests to the backend and all other requests to the frontend.
 
-1. Go to the "Settings" tab for your frontend service
-2. Under "Domains," click "Generate Domain"
-3. (Optional) For custom domains, follow Railway's instructions to set up DNS
+### Option 3: Enhance Backend to Serve Frontend (Unified Approach)
 
-### 4. Set up Railway Project Domain (Optional but Recommended)
+Modify the backend to also serve the frontend static files:
 
-To share a domain between services:
+1. Build the frontend: `npm run build`
+2. Copy the build files to the backend's static directory
+3. Update the backend's router to serve frontend files for non-API routes
+4. Deploy only the backend service
 
-1. Go to the project settings (not service settings)
-2. Under "Domains," add a custom domain
-3. Configure services to use different base paths
-   - Backend: `/api/*`  
-   - Frontend: `/*`
+## Deployment Steps for Option 1 (CORS Proxy)
+
+1. Go to your Railway dashboard
+2. Create a new service from your frontend GitHub repo
+3. Set environment variables:
+   ```
+   REACT_APP_API_URL=https://web-copy-production-5b48.up.railway.app
+   REACT_APP_USE_CORS_PROXY=true
+   ```
+4. Deploy the service
+
+## Recommended Approach
+
+For now, we recommend Option 1 (CORS Proxy) as it's the simplest solution that works immediately. If you want a more robust long-term solution, consider Option 2 (Reverse Proxy) or Option 3 (Unified Backend).
 
 ## Troubleshooting
 
 If you experience deployment issues:
 
-1. **Build Failures**: Check the build logs for errors 
+1. **Build Failures**: Check the build logs for errors
 2. **Serving Issues**: Verify that `serve` is properly handling routes
-3. **Environment Variables**: Ensure the variables are correctly set and available at build time
-
-## Alternative Deployment Options
-
-If Railway deployment issues persist, consider:
-
-1. **Vercel**: Optimized for frontend deployments
-2. **Netlify**: Great for static sites 
-3. **GitHub Pages**: Simple, free option
-
-## CORS Fallback
-
-If sharing domains isn't possible, enable the CORS proxy solution:
-
-```
-REACT_APP_USE_CORS_PROXY=true
-```
-
-This routes API requests through a proxy to bypass CORS restrictions.
+3. **Environment Variables**: Ensure variables are correctly set and available at build time
+4. **CORS Issues**: If CORS issues persist with the proxy, try the reverse proxy solution
