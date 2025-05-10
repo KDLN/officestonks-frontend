@@ -1,57 +1,59 @@
 // Admin service for frontend
-import { getToken, addAuthToRequest } from './auth';
-import { createDirectUrl, getProxyConfig } from './corsProxy';
+import { getToken } from './auth';
 
 // Make sure to include the correct API path
 // Check the current hostname to determine if we're running locally
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-// Configuration - we'll use the same approach as other services
-// Get the configuration from corsProxy to ensure consistent behavior
-const config = getProxyConfig();
-
 // For Railway deployment, we might have different URLs for frontend and backend
 // When running locally, use a relative URL for convenience
-const BASE_URL = process.env.REACT_APP_API_URL || 'https://web-production-1e26.up.railway.app';
-const API_URL = isLocalhost ? '/api' : `${BASE_URL}/api`;
-
-// Define CORS proxy URL if we need to use it
-const CORS_PROXY_URL = process.env.REACT_APP_CORS_PROXY_URL || 'https://officestonks-cors-proxy.up.railway.app';
+const BACKEND_URL = process.env.REACT_APP_API_URL || 'https://web-production-1e26.up.railway.app';
+const API_URL = isLocalhost ? '/api' : `${BACKEND_URL}/api`;
 
 // Use a relative path when local, direct URL when in production
-// This approach should be consistent with the rest of the application
+console.log('Admin service using backend URL:', BACKEND_URL);
 console.log('Admin service using API URL:', API_URL);
-console.log('Admin service using CORS proxy URL:', CORS_PROXY_URL);
 
-// ===== CORS FIX =====
-// Function to fetch data with fallback to no-cors mode
-const fetchWithFallback = async (url, options = {}) => {
+// Helper function that handles fetching with proper headers and error handling
+const fetchWithAuth = async (url, options = {}) => {
   try {
-    // Try normal fetch first
-    console.log(`Attempting standard fetch to: ${url}`);
-    return await fetch(url, options);
-  } catch (error) {
-    console.log(`Standard fetch failed: ${error.message}`);
-    console.log('Trying no-cors mode...');
-    
-    // Try no-cors mode (can't read response, but might succeed for mutations)
-    await fetch(url, {
+    const token = getToken();
+    if (!token) {
+      throw new Error('No authentication token available');
+    }
+
+    // Add Authorization header to options
+    const authOptions = {
       ...options,
-      mode: 'no-cors'
-    });
+      headers: {
+        ...options.headers,
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      // Use cors mode for direct connection to backend with CORS settings
+      mode: 'cors',
+    };
+
+    console.log(`Fetching from: ${url}`);
+    const response = await fetch(url, authOptions);
     
-    // Return mock successful response
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Request sent in no-cors mode. Operation may have succeeded.',
-      mockData: true
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status} ${response.statusText || 'Unknown error'}`);
+    }
+    
+    const text = await response.text();
+    if (!text || text.trim() === '') {
+      return null;
+    }
+    
+    return JSON.parse(text);
+  } catch (error) {
+    console.error(`Fetch error for ${url}:`, error);
+    throw error; // Re-throw to be handled by the calling function
   }
 };
 
-// Mock data for admin users when no-cors mode is used
+// Mock data for admin users when API calls fail
 const mockAdminUsers = [
   { 
     id: 1, 
@@ -82,27 +84,10 @@ const mockAdminUsers = [
 // Check if current user has admin privileges
 export const checkAdminStatus = async () => {
   try {
-    // Prepare request config with auth - consistent with other services
-    const { url, options } = addAuthToRequest(`${API_URL}/admin/status`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    console.log('Checking admin status at URL:', url);
-
-    // Make the request
-    const response = await fetch(url, options);
-
-    if (!response.ok) {
-      console.log('Admin status response not OK:', response.status);
-      return false;
-    }
-
-    const data = await response.json();
+    // Direct connection to the backend API
+    const data = await fetchWithAuth(`${API_URL}/admin/status`);
     console.log('Admin status response:', data);
-    return data.isAdmin === true;
+    return data?.isAdmin === true;
   } catch (error) {
     console.error('Error checking admin status:', error);
     console.log('Falling back to localStorage admin check');
@@ -116,32 +101,9 @@ export const checkAdminStatus = async () => {
 // Get all users (admin only)
 export const getAllUsers = async () => {
   try {
-    const token = getToken();
-    if (!token) {
-      console.error('No token available for authentication');
-      return [];
-    }
-
-    // Use CORS proxy instead of direct API call
-    const requestUrl = `${CORS_PROXY_URL}/admin/users?token=${token}`;
-    console.log('Getting all users from URL (via CORS proxy):', requestUrl);
-    
-    // Try to get the users with fallback to no-cors
-    const response = await fetchWithFallback(requestUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    const data = await response.json();
-    
-    if (data.mockData) {
-      console.log('Using mock user data');
-      return mockAdminUsers;
-    }
-    
-    return data;
+    // Direct connection to the backend API
+    const data = await fetchWithAuth(`${API_URL}/admin/users`);
+    return data || [];
   } catch (error) {
     console.error('Error fetching users:', error);
     console.log('Returning mock user data');
@@ -152,32 +114,12 @@ export const getAllUsers = async () => {
 // Reset all stock prices (admin only)
 export const resetStockPrices = async () => {
   try {
-    const token = getToken();
-    if (!token) {
-      console.error('No token available for authentication');
-      return { error: true, message: 'No authentication token available. Please log in again.' };
-    }
-
-    // Use CORS proxy instead of direct API call
-    const requestUrl = `${CORS_PROXY_URL}/admin/stocks/reset?token=${token}`;
-    console.log('Resetting stock prices with URL (via CORS proxy):', requestUrl);
-    
-    // Try to reset stock prices with fallback to no-cors
-    const response = await fetchWithFallback(requestUrl, {
+    // Direct connection to the backend API
+    const data = await fetchWithAuth(`${API_URL}/admin/stocks/reset`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      }
     });
     
-    const data = await response.json();
-    
-    if (data.mockData) {
-      console.log('Mock stock price reset');
-      return { success: true, message: 'Stock prices have been reset (mock)' };
-    }
-    
-    return data;
+    return data || { message: 'Stock prices reset successfully' };
   } catch (error) {
     console.error('Error resetting stock prices:', error);
     console.log('Returning mock response');
@@ -188,32 +130,12 @@ export const resetStockPrices = async () => {
 // Clear all chat messages (admin only)
 export const clearAllChats = async () => {
   try {
-    const token = getToken();
-    if (!token) {
-      console.error('No token available for authentication');
-      return { error: true, message: 'No authentication token available. Please log in again.' };
-    }
-
-    // Use CORS proxy instead of direct API call
-    const requestUrl = `${CORS_PROXY_URL}/admin/chat/clear?token=${token}`;
-    console.log('Clearing chat messages with URL (via CORS proxy):', requestUrl);
-    
-    // Try to clear all chats with fallback to no-cors
-    const response = await fetchWithFallback(requestUrl, {
+    // Direct connection to the backend API
+    const data = await fetchWithAuth(`${API_URL}/admin/chat/clear`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      }
     });
     
-    const data = await response.json();
-    
-    if (data.mockData) {
-      console.log('Mock chat clear');
-      return { success: true, message: 'Chat messages cleared successfully (mock)' };
-    }
-    
-    return data;
+    return data || { message: 'Chat messages cleared successfully' };
   } catch (error) {
     console.error('Error clearing chat messages:', error);
     console.log('Returning mock response');
@@ -224,33 +146,13 @@ export const clearAllChats = async () => {
 // Update a user (admin only)
 export const updateUser = async (userId, data) => {
   try {
-    const token = getToken();
-    if (!token) {
-      console.error('No token available for authentication');
-      return { error: true, ...data, id: userId, message: 'No authentication token available. Please log in again.' };
-    }
-
-    // Use CORS proxy instead of direct API call
-    const requestUrl = `${CORS_PROXY_URL}/admin/users/${userId}?token=${token}`;
-    console.log('Updating user with URL (via CORS proxy):', requestUrl);
-    
-    // Try to update user with fallback to no-cors
-    const response = await fetchWithFallback(requestUrl, {
+    // Direct connection to the backend API
+    const responseData = await fetchWithAuth(`${API_URL}/admin/users/${userId}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
     
-    const responseData = await response.json();
-    
-    if (responseData.mockData) {
-      console.log('Mock user update');
-      return { ...data, id: userId, message: 'User updated successfully (mock)' };
-    }
-    
-    return responseData;
+    return responseData || { ...data, id: userId, message: 'User updated successfully' };
   } catch (error) {
     console.error('Error updating user:', error);
     console.log('Returning mock response');
@@ -261,32 +163,12 @@ export const updateUser = async (userId, data) => {
 // Delete a user (admin only)
 export const deleteUser = async (userId) => {
   try {
-    const token = getToken();
-    if (!token) {
-      console.error('No token available for authentication');
-      return { error: true, message: 'No authentication token available. Please log in again.' };
-    }
-
-    // Use CORS proxy instead of direct API call
-    const requestUrl = `${CORS_PROXY_URL}/admin/users/${userId}?token=${token}`;
-    console.log('Deleting user with URL (via CORS proxy):', requestUrl);
-    
-    // Try to delete user with fallback to no-cors
-    const response = await fetchWithFallback(requestUrl, {
+    // Direct connection to the backend API
+    const data = await fetchWithAuth(`${API_URL}/admin/users/${userId}`, {
       method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json'
-      }
     });
     
-    const data = await response.json();
-    
-    if (data.mockData) {
-      console.log('Mock user delete');
-      return { success: true, message: 'User deleted successfully (mock)' };
-    }
-    
-    return data;
+    return data || { message: 'User deleted successfully' };
   } catch (error) {
     console.error('Error deleting user:', error);
     console.log('Returning mock response');
