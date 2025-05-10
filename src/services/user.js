@@ -2,8 +2,9 @@
 import { getToken } from './auth';
 
 // Make sure to include the correct API path
-const BASE_URL = process.env.REACT_APP_API_URL || 'https://web-production-1e26.up.railway.app';
+const BASE_URL = process.env.REACT_APP_API_URL || 'https://web-copy-production-5b48.up.railway.app';
 const API_URL = `${BASE_URL}/api`;
+console.log("User service using API URL:", API_URL);
 
 // Get leaderboard data
 export const getLeaderboard = async (limit = 10) => {
@@ -13,6 +14,7 @@ export const getLeaderboard = async (limit = 10) => {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -30,13 +32,14 @@ export const getLeaderboard = async (limit = 10) => {
 export const getUserProfile = async () => {
   try {
     const token = getToken();
-    
+
     const response = await fetch(`${API_URL}/users/me`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
+      credentials: 'include',
     });
 
     if (!response.ok) {

@@ -2,20 +2,22 @@
 import { getToken } from './auth';
 
 // Make sure to include the correct API path
-const BASE_URL = process.env.REACT_APP_API_URL || 'https://web-production-1e26.up.railway.app';
+const BASE_URL = process.env.REACT_APP_API_URL || 'https://web-copy-production-5b48.up.railway.app';
 const API_URL = `${BASE_URL}/api`;
+console.log("Chat service using API URL:", API_URL);
 
 // Get recent chat messages
 export const getRecentMessages = async (limit = 50) => {
   try {
     const token = getToken();
-    
+
     const response = await fetch(`${API_URL}/chat/messages?limit=${limit}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -33,7 +35,7 @@ export const getRecentMessages = async (limit = 50) => {
 export const sendChatMessage = async (message) => {
   try {
     const token = getToken();
-    
+
     const response = await fetch(`${API_URL}/chat/send`, {
       method: 'POST',
       headers: {
@@ -43,6 +45,7 @@ export const sendChatMessage = async (message) => {
       body: JSON.stringify({
         message,
       }),
+      credentials: 'include',
     });
 
     if (!response.ok) {
