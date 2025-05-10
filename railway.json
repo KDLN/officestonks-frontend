@@ -7,6 +7,8 @@
   "deploy": {
     "staticDeployment": true,
     "healthcheckPath": "/index.html",
-    "healthcheckTimeout": 10
+    "healthcheckTimeout": 10,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
   }
 }
