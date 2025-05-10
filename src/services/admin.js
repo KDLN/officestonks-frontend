@@ -114,12 +114,57 @@ export const getAllUsers = async () => {
 // Reset all stock prices (admin only)
 export const resetStockPrices = async () => {
   try {
-    // Direct connection to the backend API
-    const data = await fetchWithAuth(`${API_URL}/admin/stocks/reset`, {
+    const token = getToken();
+    if (!token) {
+      throw new Error('No authentication token available');
+    }
+
+    console.log('Resetting stock prices - trying GET first');
+
+    // Try GET method first
+    try {
+      const response = await fetch(`${API_URL}/admin/stocks/reset`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        mode: 'cors',
+      });
+
+      if (response.ok) {
+        const text = await response.text();
+        if (!text || text.trim() === '') {
+          return { message: 'Stock prices reset successfully' };
+        }
+        return JSON.parse(text);
+      }
+
+      console.log('GET method failed, trying POST...');
+    } catch (error) {
+      console.log('GET method failed, trying POST:', error);
+    }
+
+    // If GET fails, try POST
+    console.log('Trying POST method for stock reset');
+    const response = await fetch(`${API_URL}/admin/stocks/reset`, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      mode: 'cors',
     });
-    
-    return data || { message: 'Stock prices reset successfully' };
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const text = await response.text();
+    if (!text || text.trim() === '') {
+      return { message: 'Stock prices reset successfully' };
+    }
+    return JSON.parse(text);
   } catch (error) {
     console.error('Error resetting stock prices:', error);
     console.log('Returning mock response');
@@ -130,12 +175,57 @@ export const resetStockPrices = async () => {
 // Clear all chat messages (admin only)
 export const clearAllChats = async () => {
   try {
-    // Direct connection to the backend API
-    const data = await fetchWithAuth(`${API_URL}/admin/chat/clear`, {
+    const token = getToken();
+    if (!token) {
+      throw new Error('No authentication token available');
+    }
+
+    console.log('Clearing chat messages - trying GET first');
+
+    // Try GET method first
+    try {
+      const response = await fetch(`${API_URL}/admin/chat/clear`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        mode: 'cors',
+      });
+
+      if (response.ok) {
+        const text = await response.text();
+        if (!text || text.trim() === '') {
+          return { message: 'Chat messages cleared successfully' };
+        }
+        return JSON.parse(text);
+      }
+
+      console.log('GET method failed, trying POST...');
+    } catch (error) {
+      console.log('GET method failed, trying POST:', error);
+    }
+
+    // If GET fails, try POST
+    console.log('Trying POST method for clearing chat');
+    const response = await fetch(`${API_URL}/admin/chat/clear`, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      mode: 'cors',
     });
-    
-    return data || { message: 'Chat messages cleared successfully' };
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const text = await response.text();
+    if (!text || text.trim() === '') {
+      return { message: 'Chat messages cleared successfully' };
+    }
+    return JSON.parse(text);
   } catch (error) {
     console.error('Error clearing chat messages:', error);
     console.log('Returning mock response');
