@@ -18,10 +18,13 @@ const Chat = () => {
       setLoading(true);
       setError(null);
       const data = await getRecentMessages(50);
-      setMessages(data);
+      // Ensure data is an array before setting it
+      setMessages(Array.isArray(data) ? data : []);
       setLoading(false);
     } catch (err) {
+      console.error('Chat error:', err);
       setError('Failed to load chat messages');
+      setMessages([]); // Set empty array on error
       setLoading(false);
     }
   };
@@ -98,22 +101,22 @@ const Chat = () => {
           <div className="chat-status">Loading messages...</div>
         ) : error ? (
           <div className="chat-status">{error}</div>
-        ) : messages.length === 0 ? (
+        ) : !messages || messages.length === 0 ? (
           <div className="empty-chat">
             <p>No messages yet</p>
             <p>Be the first to start the conversation!</p>
           </div>
         ) : (
           messages.map((msg) => (
-            <div 
-              key={msg.id} 
+            <div
+              key={msg.id || Math.random()}
               className={`message ${msg.user_id === currentUserId ? 'own' : 'other'}`}
             >
               {msg.user_id !== currentUserId && (
-                <span className="message-user">{msg.username}</span>
+                <span className="message-user">{msg.username || 'Anonymous'}</span>
               )}
-              <div className="message-content">{msg.message}</div>
-              <div className="message-time">{formatTime(msg.created_at)}</div>
+              <div className="message-content">{msg.message || ''}</div>
+              <div className="message-time">{msg.created_at ? formatTime(msg.created_at) : 'Now'}</div>
             </div>
           ))
         )}
