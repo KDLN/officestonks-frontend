@@ -1,0 +1,253 @@
+.portfolio-page {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+}
+
+.portfolio-page .container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.portfolio-page h1 {
+  margin-bottom: 2rem;
+  color: #2c3e50;
+  font-size: 2rem;
+}
+
+.portfolio-page h2 {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  color: #34495e;
+  font-size: 1.5rem;
+}
+
+/* Portfolio Summary */
+.portfolio-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.summary-card {
+  flex: 1;
+  min-width: 250px;
+  background-color: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.summary-card h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #7f8c8d;
+  margin-bottom: 0.5rem;
+}
+
+.summary-value {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.summary-card.highlight {
+  background-color: #3498db;
+}
+
+.summary-card.highlight h3,
+.summary-card.highlight .summary-value {
+  color: white;
+}
+
+/* Holdings Table */
+.holdings-table-container {
+  overflow-x: auto;
+  margin-bottom: 2rem;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.holdings-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.holdings-table th,
+.holdings-table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.holdings-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #7f8c8d;
+}
+
+.holdings-table tr:last-child td {
+  border-bottom: none;
+}
+
+.stock-link {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+}
+
+.stock-symbol {
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.stock-name {
+  font-size: 0.85rem;
+  color: #7f8c8d;
+}
+
+.positive {
+  color: #27ae60;
+}
+
+.negative {
+  color: #e74c3c;
+}
+
+/* Empty portfolio */
+.empty-portfolio {
+  background-color: white;
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.empty-portfolio p {
+  margin-bottom: 1rem;
+  color: #7f8c8d;
+}
+
+/* Trading Activity */
+.trading-activity {
+  margin-top: 2rem;
+}
+
+.activity-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.activity-card {
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.activity-header {
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.activity-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #2c3e50;
+}
+
+.activity-header span {
+  color: #7f8c8d;
+  font-size: 0.9rem;
+}
+
+.activity-details {
+  padding: 1rem;
+}
+
+.activity-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.activity-label {
+  color: #7f8c8d;
+}
+
+.activity-value {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.activity-footer {
+  padding: 1rem;
+  border-top: 1px solid #ecf0f1;
+  text-align: center;
+}
+
+/* Buttons */
+.btn {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background-color: #3498db;
+  color: white;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+
+.btn.primary {
+  background-color: #3498db;
+}
+
+.btn.small {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.9rem;
+}
+
+.btn:hover {
+  background-color: #2980b9;
+}
+
+/* Loading and Error */
+.loading, .error {
+  padding: 2rem;
+  text-align: center;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.error {
+  color: #e74c3c;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .portfolio-page .container {
+    padding: 1rem;
+  }
+  
+  .summary-card {
+    min-width: 100%;
+  }
+  
+  .holdings-table th,
+  .holdings-table td {
+    padding: 0.75rem 0.5rem;
+  }
+  
+  .holdings-table th:nth-child(4),
+  .holdings-table td:nth-child(4),
+  .holdings-table th:nth-child(6),
+  .holdings-table td:nth-child(6) {
+    display: none;
+  }
+}

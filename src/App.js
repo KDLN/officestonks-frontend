@@ -10,20 +10,9 @@ import StockList from './pages/StockList';
 import StockDetail from './pages/StockDetail';
 import Leaderboard from './pages/Leaderboard';
 import Transactions from './pages/Transactions';
+import Portfolio from './pages/Portfolio';
 import ProtectedRoute from './components/ProtectedRoute';
 import { isAuthenticated } from './services/auth';
-
-// Placeholder components for pages we haven't implemented yet
-const Portfolio = () => (
-  <div style={{ padding: '50px', textAlign: 'center' }}>
-    <h1>Portfolio View</h1>
-    <p>This page will be implemented soon.</p>
-  </div>
-);
-
-// Leaderboard component is now implemented
-
-// Transactions component is now implemented
 
 function App() {
   return (
