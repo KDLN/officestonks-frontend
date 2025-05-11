@@ -13,6 +13,7 @@ show_help() {
     echo "  vercel     Prepare and deploy to Vercel"
     echo "  github     Setup for GitHub repository"
     echo "  start      Start the frontend locally with Nginx"
+    echo "  docker     Build Docker image"
     echo "  help       Show this help message"
     echo ""
     echo "Example: ./deploy.sh railway"
@@ -136,6 +137,26 @@ start_local() {
     nginx -g 'daemon off;'
 }
 
+# Docker build function
+build_docker() {
+    echo "=== Building Docker image for Office Stonks Frontend ==="
+
+    # Setup environment for Docker build
+    setup_env
+
+    # Build Docker image
+    echo "Building Docker image..."
+    docker build -t officestonks-frontend .
+
+    echo "=== Docker Build Complete ==="
+    echo "You can run the Docker image locally with:"
+    echo "docker run -p 8080:8080 officestonks-frontend"
+    echo ""
+    echo "Or push to a registry with:"
+    echo "docker tag officestonks-frontend [registry]/officestonks-frontend:[tag]"
+    echo "docker push [registry]/officestonks-frontend:[tag]"
+}
+
 # Main script logic
 case "$1" in
     railway)
@@ -149,6 +170,9 @@ case "$1" in
         ;;
     start)
         start_local
+        ;;
+    docker)
+        build_docker
         ;;
     help|--help|-h)
         show_help
