@@ -3,7 +3,7 @@
  * Provides WebSocket connection and message handling for the application
  */
 import { getToken } from './auth';
-import { WS_URL } from '../config/api';
+import { WS_URL, BACKEND_URL, API_URL, ENDPOINTS } from '../config/api';
 
 let socket = null;
 let listeners = {};
@@ -32,6 +32,36 @@ export const initWebSocket = () => {
 
   // Create WebSocket connection with token
   // Use the centralized WebSocket URL from config/api.js
+
+  // First check if the backend is available by making a fetch request to health endpoint
+  fetch(`${API_URL}/${ENDPOINTS.API_HEALTH}`)
+    .then(response => {
+      if (!response.ok) {
+        console.error(`Backend health check failed: ${response.status}`);
+      } else {
+        console.log('Backend health check passed');
+      }
+    })
+    .catch(error => {
+      console.error('Backend health check error:', error);
+    });
+
+  // Also check WebSocket health endpoint
+  fetch(`${BACKEND_URL}/${ENDPOINTS.WS_HEALTH}`)
+    .then(response => {
+      if (!response.ok) {
+        console.error(`WebSocket health check failed: ${response.status}`);
+      } else {
+        console.log('WebSocket health check passed');
+        return response.json();
+      }
+    })
+    .then(data => {
+      if (data) console.log('WebSocket health data:', data);
+    })
+    .catch(error => {
+      console.error('WebSocket health check error:', error);
+    });
 
   // Create the WebSocket URL with token for authentication
   const wsUrl = `${WS_URL}?token=${token}`;
@@ -163,11 +193,23 @@ export const initWebSocket = () => {
     console.error('WebSocket error:', error);
 
     // Add more detailed error logging to help debug CORS issues
-    if (error && error.target && error.target.readyState === WebSocket.CLOSED) {
-      console.error('WebSocket connection failed - possible CORS issue or server unavailable');
-      console.error('If this is a CORS error, ensure the backend allows WebSocket connections from this origin');
-      console.error('Current origin:', window.location.origin);
-    }
+    console.error('WebSocket connection failed - possible CORS issue or server unavailable');
+    console.error('If this is a CORS error, ensure the backend allows WebSocket connections from this origin');
+    console.error('Current origin:', window.location.origin);
+
+    // Try to diagnose connection issues by checking the server health again
+    fetch(`${BACKEND_URL}/${ENDPOINTS.WS_HEALTH}`)
+      .then(response => {
+        if (!response.ok) {
+          console.error(`WebSocket server appears to be down: ${response.status}`);
+        } else {
+          console.error('WebSocket server is up, but connection failed. Possible CORS or authentication issue.');
+        }
+      })
+      .catch(healthError => {
+        console.error('WebSocket server health check failed:', healthError);
+        console.error('WebSocket server may be unreachable');
+      });
 
     // Socket will automatically close after error
   });

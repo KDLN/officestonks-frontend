@@ -37,26 +37,30 @@ export const ENDPOINTS = {
   // Auth endpoints
   LOGIN: 'auth/login',
   REGISTER: 'auth/register',
-  
+
   // User endpoints
   USER_PROFILE: 'users/me',
   LEADERBOARD: 'users/leaderboard',
-  
+
   // Stock endpoints
   STOCKS: 'stocks',
   STOCK_DETAIL: (id) => `stocks/${id}`,
   PORTFOLIO: 'portfolio',
   TRADING: 'trading',
   TRANSACTIONS: 'transactions',
-  
+
   // Admin endpoints
   ADMIN_STATUS: 'admin/status',
   ADMIN_USERS: 'admin/users',
   ADMIN_USER: (id) => `admin/users/${id}`,
   ADMIN_STOCKS_RESET: 'admin/stocks/reset',
   ADMIN_CHAT_CLEAR: 'admin/chat/clear',
-  
+
   // Chat endpoints
   CHAT_MESSAGES: 'chat/messages',
-  CHAT_SEND: 'chat/send'
+  CHAT_SEND: 'chat/send',
+
+  // Health check endpoints
+  API_HEALTH: 'health',
+  WS_HEALTH: 'ws/health'
 };
