@@ -39,6 +39,27 @@ const MOCK_ADMIN_USERS = [
 ];
 
 /**
+ * Debug admin token parsing
+ * Tests token parsing with backend debug endpoint
+ * @returns {Promise<Object>} Debug information about the token
+ */
+export const debugAdminToken = async () => {
+  try {
+    const token = getToken();
+    const debugUrl = `https://web-production-1e26.up.railway.app/debug-admin-jwt?token=${token}`;
+    console.log('Testing token parsing at:', debugUrl);
+    
+    const response = await fetch(debugUrl);
+    const debugData = await response.json();
+    console.log('Token debug:', debugData);
+    return debugData;
+  } catch (error) {
+    console.error('Error debugging token:', error);
+    return { error: error.message };
+  }
+};
+
+/**
  * Check if current user has admin privileges
  * @returns {Promise<boolean>} True if user is admin
  */
@@ -47,7 +68,7 @@ export const checkAdminStatus = async () => {
     // Get token for query parameter
     const token = getToken();
     
-    // Use complete admin path
+    // Use complete admin path with token as query parameter only (Option 1)
     const adminUrl = `${ADMIN_URL}/admin/status${token ? `?token=${token}` : ''}`;
     console.log('Checking admin status at:', adminUrl);
 
@@ -57,9 +78,10 @@ export const checkAdminStatus = async () => {
         method: 'GET',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : ''
-        }
+          'Content-Type': 'application/json'
+          // Removed Authorization header as per backend recommendation
+        },
+        mode: 'cors'
       },
       { isAdmin: true }
     );
@@ -83,7 +105,7 @@ export const getAllUsers = async () => {
     // Get token for query parameter
     const token = getToken();
     
-    // Use complete admin path
+    // Use complete admin path with token as query parameter only (Option 1)
     const adminUrl = `${ADMIN_URL}/admin/users${token ? `?token=${token}` : ''}`;
     console.log('Fetching admin users from:', adminUrl);
 
@@ -93,9 +115,10 @@ export const getAllUsers = async () => {
         method: 'GET',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : ''
-        }
+          'Content-Type': 'application/json'
+          // Removed Authorization header as per backend recommendation
+        },
+        mode: 'cors'
       },
       MOCK_ADMIN_USERS
     );
@@ -116,7 +139,7 @@ export const resetStockPrices = async () => {
     // Get token for query parameter
     const token = getToken();
     
-    // Use complete admin path
+    // Use complete admin path with token as query parameter only (Option 1)
     const adminUrl = `${ADMIN_URL}/admin/stocks/reset`;
     console.log('Resetting stock prices at:', adminUrl);
 
@@ -129,9 +152,10 @@ export const resetStockPrices = async () => {
           method: 'GET',
           credentials: 'include',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : ''
-          }
+            'Content-Type': 'application/json'
+            // Removed Authorization header as per backend recommendation
+          },
+          mode: 'cors'
         },
         successResponse
       );
@@ -145,9 +169,10 @@ export const resetStockPrices = async () => {
           method: 'POST',
           credentials: 'include',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : ''
+            'Content-Type': 'application/json'
+            // Removed Authorization header as per backend recommendation
           },
+          mode: 'cors',
           body: JSON.stringify({ force: true })
         },
         successResponse
@@ -170,7 +195,7 @@ export const clearAllChats = async () => {
     // Get token for query parameter
     const token = getToken();
     
-    // Use complete admin path
+    // Use complete admin path with token as query parameter only (Option 1)
     const adminUrl = `${ADMIN_URL}/admin/chat/clear`;
     console.log('Clearing chat messages at:', adminUrl);
 
@@ -183,9 +208,10 @@ export const clearAllChats = async () => {
           method: 'GET',
           credentials: 'include',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : ''
-          }
+            'Content-Type': 'application/json'
+            // Removed Authorization header as per backend recommendation
+          },
+          mode: 'cors'
         },
         successResponse
       );
@@ -199,9 +225,10 @@ export const clearAllChats = async () => {
           method: 'POST',
           credentials: 'include',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : ''
+            'Content-Type': 'application/json'
+            // Removed Authorization header as per backend recommendation
           },
+          mode: 'cors',
           body: JSON.stringify({ force: true })
         },
         successResponse
@@ -224,7 +251,7 @@ export const updateUser = async (userId, data) => {
     // Get token for query parameter
     const token = getToken();
     
-    // Use complete admin path
+    // Use complete admin path with token as query parameter only (Option 1)
     const adminUrl = `${ADMIN_URL}/admin/users/${userId}${token ? `?token=${token}` : ''}`;
     console.log('Updating user at:', adminUrl, 'with data:', data);
 
@@ -234,9 +261,10 @@ export const updateUser = async (userId, data) => {
         method: 'PUT',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : ''
+          'Content-Type': 'application/json'
+          // Removed Authorization header as per backend recommendation
         },
+        mode: 'cors',
         body: JSON.stringify(data)
       },
       { ...data, id: userId, message: 'User updated successfully (mock)' }
@@ -257,7 +285,7 @@ export const deleteUser = async (userId) => {
     // Get token for query parameter
     const token = getToken();
     
-    // Use complete admin path
+    // Use complete admin path with token as query parameter only (Option 1)
     const adminUrl = `${ADMIN_URL}/admin/users/${userId}${token ? `?token=${token}` : ''}`;
     console.log('Deleting user at:', adminUrl);
 
@@ -267,9 +295,10 @@ export const deleteUser = async (userId) => {
         method: 'DELETE',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : ''
-        }
+          'Content-Type': 'application/json'
+          // Removed Authorization header as per backend recommendation
+        },
+        mode: 'cors'
       },
       { message: 'User deleted successfully (mock)' }
     );
