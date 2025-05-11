@@ -20,12 +20,24 @@ FROM nginx:alpine
 # Copy built assets from the build stage
 COPY --from=build /app/build /usr/share/nginx/html
 
-# Copy nginx configuration and startup script
+# Copy nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY start.sh /start.sh
 
-# Make startup script executable
-RUN chmod +x /start.sh
+# Create startup script directly
+RUN echo '#!/bin/sh' > /start.sh && \
+    echo '# Start script for Railway deployment' >> /start.sh && \
+    echo 'echo "Starting frontend service..."' >> /start.sh && \
+    echo '' >> /start.sh && \
+    echo '# Install curl for healthcheck if not already installed' >> /start.sh && \
+    echo 'if ! command -v curl > /dev/null; then' >> /start.sh && \
+    echo '  echo "Installing curl for healthcheck..."' >> /start.sh && \
+    echo '  apk add --no-cache curl' >> /start.sh && \
+    echo 'fi' >> /start.sh && \
+    echo '' >> /start.sh && \
+    echo '# Start Nginx with detailed logging' >> /start.sh && \
+    echo 'echo "Starting Nginx..."' >> /start.sh && \
+    echo 'nginx -g "daemon off;"' >> /start.sh && \
+    chmod +x /start.sh
 
 # Create a health check file
 RUN echo "OK" > /usr/share/nginx/html/health
