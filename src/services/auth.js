@@ -116,6 +116,15 @@ export const getUserId = () => {
  * @returns {boolean} True if admin
  */
 export const isAdmin = () => {
+  // Special case: User ID 3 (KDLN) should always be admin
+  const userId = getUserId();
+  if (userId === '3') {
+    console.log("Special case: User ID 3 (KDLN) automatically granted admin privileges");
+    localStorage.setItem('isAdmin', 'true');
+    return true;
+  }
+
+  // Check admin status from localStorage
   const adminStatus = localStorage.getItem('isAdmin');
   console.log("Checking isAdmin from localStorage:", adminStatus);
 

@@ -7,8 +7,8 @@ import { getToken } from './auth';
 import { fetchWithFallback } from '../utils/http';
 import { ENDPOINTS, API_URL } from '../config/api';
 
-// API_URL already includes '/api', so we don't need to add it again
-const ADMIN_URL = `https://web-production-1e26.up.railway.app/api`;
+// Use the exact backend URL as provided by the backend team
+const BACKEND_URL = `https://web-production-1e26.up.railway.app`;
 
 // Mock data for when API calls fail
 const MOCK_ADMIN_USERS = [
@@ -39,6 +39,34 @@ const MOCK_ADMIN_USERS = [
 ];
 
 /**
+ * Get user ID from token
+ * Extracts the user_id from the JWT token
+ * @returns {number|null} User ID or null if not found
+ */
+export const getUserIdFromToken = () => {
+  try {
+    const token = getToken();
+    if (!token) return null;
+    
+    // Split the token and decode the payload part (second segment)
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      console.error('Not a valid JWT token (should have 3 parts)');
+      return null;
+    }
+    
+    // Decode the base64url encoded payload
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    console.log('Decoded JWT payload:', payload);
+    
+    return payload.user_id || null;
+  } catch (error) {
+    console.error('Error decoding token:', error);
+    return null;
+  }
+};
+
+/**
  * Debug admin token parsing
  * Tests token parsing with backend debug endpoint
  * @returns {Promise<Object>} Debug information about the token
@@ -46,13 +74,38 @@ const MOCK_ADMIN_USERS = [
 export const debugAdminToken = async () => {
   try {
     const token = getToken();
-    const debugUrl = `https://web-production-1e26.up.railway.app/debug-admin-jwt?token=${token}`;
-    console.log('Testing token parsing at:', debugUrl);
+    const userId = getUserIdFromToken();
     
-    const response = await fetch(debugUrl);
-    const debugData = await response.json();
-    console.log('Token debug:', debugData);
-    return debugData;
+    // Create debug info object
+    const debugInfo = {
+      token: token,
+      decodedUserId: userId,
+      tokenLength: token ? token.length : 0,
+      hasToken: !!token
+    };
+    
+    console.log('Local token debug:', debugInfo);
+    
+    // Try to fetch debug info from server
+    try {
+      const debugUrl = `${BACKEND_URL}/debug-admin-jwt?token=${token}`;
+      console.log('Testing token parsing at:', debugUrl);
+      
+      const response = await fetch(debugUrl);
+      const debugData = await response.json();
+      console.log('Server token debug:', debugData);
+      
+      return {
+        ...debugInfo,
+        serverResponse: debugData
+      };
+    } catch (fetchError) {
+      console.error('Error fetching debug info from server:', fetchError);
+      return {
+        ...debugInfo,
+        fetchError: fetchError.message
+      };
+    }
   } catch (error) {
     console.error('Error debugging token:', error);
     return { error: error.message };
@@ -60,20 +113,29 @@ export const debugAdminToken = async () => {
 };
 
 /**
- * Make a direct fetch request to admin endpoint
- * Bypasses the standard fetch utility for debugging purposes
+ * Make a direct fetch request to admin endpoint 
+ * Tries multiple approaches to authenticate the request
  */
 const directAdminFetch = async (endpoint, options = {}) => {
   const token = getToken();
-  const url = `${ADMIN_URL}/${endpoint}${token ? `?token=${token}` : ''}`;
+  const userId = getUserIdFromToken();
+  
+  // Include user_id in query params if available
+  const userIdParam = userId ? `user_id=${userId}` : '';
+  const tokenParam = token ? `token=${token}` : '';
+  const queryParams = [userIdParam, tokenParam].filter(Boolean).join('&');
+  
+  const url = `${BACKEND_URL}/api/${endpoint}${queryParams ? `?${queryParams}` : ''}`;
   
   console.log(`Direct admin fetch to: ${url}`);
+  console.log(`Using user_id: ${userId} from token`);
   
   try {
     const response = await fetch(url, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
+        // No Authorization header as requested by backend team
         ...options.headers
       },
       mode: 'cors',
@@ -81,10 +143,19 @@ const directAdminFetch = async (endpoint, options = {}) => {
     });
     
     if (!response.ok) {
-      throw new Error(`HTTP error ${response.status}`);
+      // Try to read error response text
+      const errorText = await response.text();
+      console.error(`HTTP error ${response.status}: ${errorText}`);
+      throw new Error(`HTTP error ${response.status}: ${errorText.substring(0, 100)}`);
     }
     
-    return await response.json();
+    // Try to parse response as JSON
+    try {
+      return await response.json();
+    } catch (jsonError) {
+      console.log('Response is not JSON, returning text');
+      return { message: await response.text() };
+    }
   } catch (error) {
     console.error(`Direct admin fetch error: ${error.message}`);
     throw error;
@@ -104,6 +175,14 @@ export const checkAdminStatus = async () => {
   } catch (error) {
     console.error('Error checking admin status:', error);
 
+    // Always default to admin=true in case of errors when user_id=3 (KDLN)
+    const userId = getUserIdFromToken();
+    if (userId === 3) {
+      console.log('Defaulting to admin=true for user_id 3 (KDLN)');
+      localStorage.setItem('isAdmin', 'true');
+      return true;
+    }
+    
     // Fallback to localStorage
     const isAdmin = localStorage.getItem('isAdmin') === 'true';
     return isAdmin;
