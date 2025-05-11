@@ -1,59 +1,26 @@
-// Authentication service for the frontend
-import { getProxyConfig, PROXY_ENABLED, createDirectUrl } from './corsProxy';
+/**
+ * Authentication service for the frontend
+ * Handles user authentication, token management and auth status
+ */
 
-// Get API URL helpers
-const { createUrl } = getProxyConfig();
+import { fetchWithAuth } from '../utils/http';
+import { ENDPOINTS } from '../config/api';
 
-// Original API URL (for reference only)
-const BASE_URL = process.env.REACT_APP_API_URL || 'https://web-copy-production-5b48.up.railway.app';
-const API_URL = `${BASE_URL}/api`;
-console.log("Using API URL:", PROXY_ENABLED ? "CORS Proxy -> " + API_URL : API_URL);
-
-// Register a new user
+/**
+ * Register a new user
+ * @param {string} username - Username for new account
+ * @param {string} password - Password for new account
+ * @returns {Promise<Object>} Registration response with token
+ */
 export const register = async (username, password) => {
   try {
-    // Create URL with proxy if enabled
-    const endpoint = 'auth/register';
-    const apiUrl = PROXY_ENABLED ? createUrl(endpoint) : `${API_URL}/${endpoint}`;
-
-    // Prepare request config with auth
-    const { url, options } = addAuthToRequest(apiUrl, {
+    const data = await fetchWithAuth(ENDPOINTS.REGISTER, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ username, password }),
     });
 
-    console.log("Making registration request to:", url);
-
-    // Make the request
-    const response = await fetch(url, options);
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || 'Registration failed');
-    }
-
-    const data = await response.json();
-
-    // Store token in localStorage
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('userId', data.user_id);
-
-    // Store username if available
-    if (data.username) {
-      localStorage.setItem('username', data.username);
-    }
-
-    // Store admin status if available
-    if (data.is_admin !== undefined) {
-      console.log("Admin status received:", data.is_admin);
-      localStorage.setItem('isAdmin', data.is_admin.toString());
-    } else {
-      console.log("No admin status in response");
-    }
-
+    // Store authentication data
+    storeAuthData(data);
     return data;
   } catch (error) {
     console.error("Registration error:", error);
@@ -61,51 +28,21 @@ export const register = async (username, password) => {
   }
 };
 
-// Login an existing user
+/**
+ * Login an existing user
+ * @param {string} username - Username
+ * @param {string} password - Password
+ * @returns {Promise<Object>} Login response with token
+ */
 export const login = async (username, password) => {
   try {
-    // Create URL with proxy if enabled
-    const endpoint = 'auth/login';
-    const apiUrl = PROXY_ENABLED ? createUrl(endpoint) : `${API_URL}/${endpoint}`;
-
-    // Prepare request config with auth
-    const { url, options } = addAuthToRequest(apiUrl, {
+    const data = await fetchWithAuth(ENDPOINTS.LOGIN, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ username, password }),
     });
 
-    console.log("Making login request to:", url);
-
-    // Make the request
-    const response = await fetch(url, options);
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || 'Login failed');
-    }
-
-    const data = await response.json();
-
-    // Store token in localStorage
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('userId', data.user_id);
-
-    // Store username if available
-    if (data.username) {
-      localStorage.setItem('username', data.username);
-    }
-
-    // Store admin status if available
-    if (data.is_admin !== undefined) {
-      console.log("Admin status received:", data.is_admin);
-      localStorage.setItem('isAdmin', data.is_admin.toString());
-    } else {
-      console.log("No admin status in response");
-    }
-
+    // Store authentication data
+    storeAuthData(data);
     return data;
   } catch (error) {
     console.error("Login error:", error);
@@ -113,7 +50,32 @@ export const login = async (username, password) => {
   }
 };
 
-// Logout
+/**
+ * Store authentication data in localStorage
+ * @param {Object} data - Auth data from API
+ */
+const storeAuthData = (data) => {
+  // Store token in localStorage
+  localStorage.setItem('token', data.token);
+  localStorage.setItem('userId', data.user_id);
+
+  // Store username if available
+  if (data.username) {
+    localStorage.setItem('username', data.username);
+  }
+
+  // Store admin status if available
+  if (data.is_admin !== undefined) {
+    console.log("Admin status received:", data.is_admin);
+    localStorage.setItem('isAdmin', data.is_admin.toString());
+  } else {
+    console.log("No admin status in response");
+  }
+};
+
+/**
+ * Logout the current user
+ */
 export const logout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('userId');
@@ -122,54 +84,34 @@ export const logout = () => {
   window.location.href = '/login';
 };
 
-// Check if user is authenticated
+/**
+ * Check if user is authenticated
+ * @returns {boolean} True if authenticated
+ */
 export const isAuthenticated = () => {
-  return !!localStorage.getItem('token');
+  return !!getToken();
 };
 
-// Get authentication token
+/**
+ * Get authentication token
+ * @returns {string|null} Token or null if not authenticated
+ */
 export const getToken = () => {
   return localStorage.getItem('token');
 };
 
-// Add auth token to API request
-export const addAuthToRequest = (url, options = {}) => {
-  const token = getToken();
-  const config = getProxyConfig();
-
-  // Ensure headers object exists
-  if (!options.headers) {
-    options.headers = {};
-  }
-
-  // Add token to Authorization header if available and enabled
-  if (token && config.addAuthToHeader) {
-    options.headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  // Set credentials mode based on config
-  if (config.useCredentials) {
-    options.credentials = 'include';
-  } else {
-    options.credentials = 'omit';  // Don't send cookies
-  }
-
-  // If there's a token and it's not in the url, add it as a query parameter as well
-  // This is for backward compatibility and extra security
-  if (token && config.addAuthToUrl && !url.includes('token=')) {
-    const separator = url.includes('?') ? '&' : '?';
-    url = `${url}${separator}token=${token}`;
-  }
-
-  return { url, options };
-};
-
-// Get user ID
+/**
+ * Get user ID
+ * @returns {string|null} User ID or null if not authenticated
+ */
 export const getUserId = () => {
   return localStorage.getItem('userId');
 };
 
-// Check if user is admin
+/**
+ * Check if user is admin
+ * @returns {boolean} True if admin
+ */
 export const isAdmin = () => {
   const adminStatus = localStorage.getItem('isAdmin');
   console.log("Checking isAdmin from localStorage:", adminStatus);
@@ -181,7 +123,10 @@ export const isAdmin = () => {
   return result;
 };
 
-// Set admin status
+/**
+ * Set admin status
+ * @param {boolean} isAdmin - Admin status to set
+ */
 export const setAdminStatus = (isAdmin) => {
   localStorage.setItem('isAdmin', isAdmin.toString());
 };

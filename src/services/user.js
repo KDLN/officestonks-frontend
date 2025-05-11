@@ -1,57 +1,32 @@
-// User service for frontend
-import { addAuthToRequest } from './auth';
+/**
+ * User service for frontend
+ * Handles user profile and leaderboard functionality
+ */
 
-// Make sure to include the correct API path
-const BASE_URL = process.env.REACT_APP_API_URL || 'https://web-copy-production-5b48.up.railway.app';
-const API_URL = `${BASE_URL}/api`;
-console.log("User service using API URL:", API_URL);
+import { fetchWithAuth } from '../utils/http';
+import { ENDPOINTS } from '../config/api';
 
-// Get leaderboard data
+/**
+ * Get leaderboard data
+ * @param {number} limit - Maximum number of users to return
+ * @returns {Promise<Array>} List of top users
+ */
 export const getLeaderboard = async (limit = 10) => {
   try {
-    // Prepare request config with auth
-    const { url, options } = addAuthToRequest(`${API_URL}/users/leaderboard?limit=${limit}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    // Make the request
-    const response = await fetch(url, options);
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || 'Failed to fetch leaderboard');
-    }
-
-    return await response.json();
+    return await fetchWithAuth(`${ENDPOINTS.LEADERBOARD}?limit=${limit}`);
   } catch (error) {
     console.error('Error fetching leaderboard:', error);
     throw error;
   }
 };
 
-// Get current user's profile
+/**
+ * Get current user's profile
+ * @returns {Promise<Object>} User profile data
+ */
 export const getUserProfile = async () => {
   try {
-    // Prepare request config with auth
-    const { url, options } = addAuthToRequest(`${API_URL}/users/me`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    // Make the request
-    const response = await fetch(url, options);
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || 'Failed to fetch user profile');
-    }
-
-    return await response.json();
+    return await fetchWithAuth(ENDPOINTS.USER_PROFILE);
   } catch (error) {
     console.error('Error fetching user profile:', error);
     throw error;

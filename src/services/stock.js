@@ -1,140 +1,83 @@
-// Stock market service for frontend
-import { addAuthToRequest } from './auth';
+/**
+ * Stock market service for frontend
+ * Handles stock data, trading, portfolio and transaction functionality
+ */
 
-// Make sure to include the correct API path
-const BASE_URL = process.env.REACT_APP_API_URL || 'https://web-copy-production-5b48.up.railway.app';
-const API_URL = `${BASE_URL}/api`;
-console.log("Stock service using API URL:", API_URL);
+import { fetchWithAuth } from '../utils/http';
+import { ENDPOINTS } from '../config/api';
 
-// Get all available stocks
+/**
+ * Get all available stocks
+ * @returns {Promise<Array>} List of all stocks
+ */
 export const getAllStocks = async () => {
   try {
-    // Prepare request config with auth
-    const { url, options } = addAuthToRequest(`${API_URL}/stocks`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    // Make the request
-    const response = await fetch(url, options);
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || 'Failed to fetch stocks');
-    }
-
-    return await response.json();
+    return await fetchWithAuth(ENDPOINTS.STOCKS);
   } catch (error) {
     console.error('Error fetching stocks:', error);
     throw error;
   }
 };
 
-// Get a specific stock by ID
+/**
+ * Get a specific stock by ID
+ * @param {number} stockId - ID of the stock to fetch
+ * @returns {Promise<Object>} Stock details
+ */
 export const getStockById = async (stockId) => {
   try {
-    // Prepare request config with auth
-    const { url, options } = addAuthToRequest(`${API_URL}/stocks/${stockId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    // Make the request
-    const response = await fetch(url, options);
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || 'Failed to fetch stock');
-    }
-
-    return await response.json();
+    return await fetchWithAuth(ENDPOINTS.STOCK_DETAIL(stockId));
   } catch (error) {
     console.error(`Error fetching stock ${stockId}:`, error);
     throw error;
   }
 };
 
-// Get the user's portfolio
+/**
+ * Get the user's portfolio
+ * @returns {Promise<Object>} User's portfolio
+ */
 export const getUserPortfolio = async () => {
   try {
-    // Prepare request config with auth
-    const { url, options } = addAuthToRequest(`${API_URL}/portfolio`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    // Make the request
-    const response = await fetch(url, options);
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || 'Failed to fetch portfolio');
-    }
-
-    return await response.json();
+    return await fetchWithAuth(ENDPOINTS.PORTFOLIO);
   } catch (error) {
     console.error('Error fetching portfolio:', error);
     throw error;
   }
 };
 
-// Execute a trade (buy or sell)
+/**
+ * Execute a trade (buy or sell)
+ * @param {number} stockId - ID of the stock to trade
+ * @param {number} quantity - Number of shares to trade
+ * @param {string} action - 'buy' or 'sell'
+ * @returns {Promise<Object>} Trade result
+ */
 export const executeTrade = async (stockId, quantity, action) => {
   try {
-    // Prepare request config with auth
-    const { url, options } = addAuthToRequest(`${API_URL}/trading`, {
+    return await fetchWithAuth(ENDPOINTS.TRADING, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         stock_id: stockId,
         quantity: quantity,
         action: action, // 'buy' or 'sell'
       }),
     });
-
-    // Make the request
-    const response = await fetch(url, options);
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Failed to ${action} stock`);
-    }
-
-    return await response.json();
   } catch (error) {
     console.error(`Error executing ${action} trade:`, error);
     throw error;
   }
 };
 
-// Get transaction history
+/**
+ * Get transaction history
+ * @param {number} limit - Max number of transactions to return
+ * @param {number} offset - Offset for pagination
+ * @returns {Promise<Array>} List of transactions
+ */
 export const getTransactionHistory = async (limit = 50, offset = 0) => {
   try {
-    // Prepare request config with auth
-    const { url, options } = addAuthToRequest(`${API_URL}/transactions?limit=${limit}&offset=${offset}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    // Make the request
-    const response = await fetch(url, options);
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || 'Failed to fetch transaction history');
-    }
-
-    return await response.json();
+    return await fetchWithAuth(`${ENDPOINTS.TRANSACTIONS}?limit=${limit}&offset=${offset}`);
   } catch (error) {
     console.error('Error fetching transaction history:', error);
     throw error;

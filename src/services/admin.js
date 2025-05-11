@@ -1,60 +1,14 @@
-// Admin service for frontend
+/**
+ * Admin service for frontend
+ * Handles admin-specific API interactions
+ */
+
 import { getToken } from './auth';
+import { fetchWithFallback } from '../utils/http';
+import { ENDPOINTS, API_URL } from '../config/api';
 
-// Make sure to include the correct API path
-// Check the current hostname to determine if we're running locally
-const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-
-// For Railway deployment, we might have different URLs for frontend and backend
-// When running locally, use a relative URL for convenience
-const BACKEND_URL = process.env.REACT_APP_API_URL || 'https://web-production-1e26.up.railway.app';
-const API_URL = isLocalhost ? '/api' : `${BACKEND_URL}/api`;
-
-// Use a relative path when local, direct URL when in production
-console.log('Admin service using backend URL:', BACKEND_URL);
-console.log('Admin service using API URL:', API_URL);
-
-// Helper function that handles fetching with proper headers and error handling
-const fetchWithAuth = async (url, options = {}) => {
-  try {
-    const token = getToken();
-    if (!token) {
-      throw new Error('No authentication token available');
-    }
-
-    // Add Authorization header to options
-    const authOptions = {
-      ...options,
-      headers: {
-        ...options.headers,
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      // Use cors mode for direct connection to backend with CORS settings
-      mode: 'cors',
-    };
-
-    console.log(`Fetching from: ${url}`);
-    const response = await fetch(url, authOptions);
-    
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status} ${response.statusText || 'Unknown error'}`);
-    }
-    
-    const text = await response.text();
-    if (!text || text.trim() === '') {
-      return null;
-    }
-    
-    return JSON.parse(text);
-  } catch (error) {
-    console.error(`Fetch error for ${url}:`, error);
-    throw error; // Re-throw to be handled by the calling function
-  }
-};
-
-// Mock data for admin users when API calls fail
-const mockAdminUsers = [
+// Mock data for when API calls fail
+const MOCK_ADMIN_USERS = [
   { 
     id: 1, 
     username: "admin", 
@@ -81,187 +35,151 @@ const mockAdminUsers = [
   }
 ];
 
-// Check if current user has admin privileges
+/**
+ * Check if current user has admin privileges
+ * @returns {Promise<boolean>} True if user is admin
+ */
 export const checkAdminStatus = async () => {
   try {
-    // Direct connection to the backend API
-    const data = await fetchWithAuth(`${API_URL}/admin/status`);
-    console.log('Admin status response:', data);
-    return data?.isAdmin === true;
+    const result = await fetchWithFallback(
+      ENDPOINTS.ADMIN_STATUS,
+      { method: 'GET' },
+      { isAdmin: true }
+    );
+    
+    return result?.isAdmin === true;
   } catch (error) {
     console.error('Error checking admin status:', error);
-    console.log('Falling back to localStorage admin check');
     
-    // Fallback to localStorage if fetch fails
+    // Fallback to localStorage
     const isAdmin = localStorage.getItem('isAdmin') === 'true';
     return isAdmin;
   }
 };
 
-// Get all users (admin only)
+/**
+ * Get all users (admin only)
+ * @returns {Promise<Array>} List of all users
+ */
 export const getAllUsers = async () => {
   try {
-    // Direct connection to the backend API
-    const data = await fetchWithAuth(`${API_URL}/admin/users`);
-    return data || [];
+    return await fetchWithFallback(
+      ENDPOINTS.ADMIN_USERS,
+      { method: 'GET' },
+      MOCK_ADMIN_USERS
+    );
   } catch (error) {
     console.error('Error fetching users:', error);
-    console.log('Returning mock user data');
-    return mockAdminUsers;
+    return MOCK_ADMIN_USERS;
   }
 };
 
-// Reset all stock prices (admin only)
+/**
+ * Reset all stock prices (admin only)
+ * @returns {Promise<Object>} Status of the operation
+ */
 export const resetStockPrices = async () => {
+  const successResponse = { message: 'Stock prices reset successfully' };
+  
   try {
-    const token = getToken();
-    if (!token) {
-      throw new Error('No authentication token available');
-    }
-
-    console.log('Resetting stock prices - trying GET first');
-
-    // Try GET method first
+    // Try multiple HTTP methods to handle different API configurations
+    // First try GET method
     try {
-      const response = await fetch(`${API_URL}/admin/stocks/reset`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+      return await fetchWithFallback(
+        `${ENDPOINTS.ADMIN_STOCKS_RESET}?force=true`,
+        { method: 'GET' },
+        successResponse
+      );
+    } catch (getError) {
+      console.log('GET request for stock reset failed, trying POST...', getError);
+      
+      // If GET fails, try POST method
+      return await fetchWithFallback(
+        ENDPOINTS.ADMIN_STOCKS_RESET,
+        { 
+          method: 'POST',
+          body: JSON.stringify({ force: true })
         },
-        mode: 'cors',
-      });
-
-      if (response.ok) {
-        const text = await response.text();
-        if (!text || text.trim() === '') {
-          return { message: 'Stock prices reset successfully' };
-        }
-        return JSON.parse(text);
-      }
-
-      console.log('GET method failed, trying POST...');
-    } catch (error) {
-      console.log('GET method failed, trying POST:', error);
+        successResponse
+      );
     }
-
-    // If GET fails, try POST
-    console.log('Trying POST method for stock reset');
-    const response = await fetch(`${API_URL}/admin/stocks/reset`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      mode: 'cors',
-    });
-
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
-
-    const text = await response.text();
-    if (!text || text.trim() === '') {
-      return { message: 'Stock prices reset successfully' };
-    }
-    return JSON.parse(text);
   } catch (error) {
     console.error('Error resetting stock prices:', error);
-    console.log('Returning mock response');
     return { success: true, message: 'Stock prices have been reset (mock)' };
   }
 };
 
-// Clear all chat messages (admin only)
+/**
+ * Clear all chat messages (admin only)
+ * @returns {Promise<Object>} Status of the operation
+ */
 export const clearAllChats = async () => {
+  const successResponse = { message: 'Chat messages cleared successfully' };
+  
   try {
-    const token = getToken();
-    if (!token) {
-      throw new Error('No authentication token available');
-    }
-
-    console.log('Clearing chat messages - trying GET first');
-
-    // Try GET method first
+    // Try multiple HTTP methods to handle different API configurations
+    // First try GET method
     try {
-      const response = await fetch(`${API_URL}/admin/chat/clear`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+      return await fetchWithFallback(
+        `${ENDPOINTS.ADMIN_CHAT_CLEAR}?force=true`,
+        { method: 'GET' },
+        successResponse
+      );
+    } catch (getError) {
+      console.log('GET request for chat clear failed, trying POST...', getError);
+      
+      // If GET fails, try POST method
+      return await fetchWithFallback(
+        ENDPOINTS.ADMIN_CHAT_CLEAR,
+        { 
+          method: 'POST',
+          body: JSON.stringify({ force: true })
         },
-        mode: 'cors',
-      });
-
-      if (response.ok) {
-        const text = await response.text();
-        if (!text || text.trim() === '') {
-          return { message: 'Chat messages cleared successfully' };
-        }
-        return JSON.parse(text);
-      }
-
-      console.log('GET method failed, trying POST...');
-    } catch (error) {
-      console.log('GET method failed, trying POST:', error);
+        successResponse
+      );
     }
-
-    // If GET fails, try POST
-    console.log('Trying POST method for clearing chat');
-    const response = await fetch(`${API_URL}/admin/chat/clear`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      mode: 'cors',
-    });
-
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
-
-    const text = await response.text();
-    if (!text || text.trim() === '') {
-      return { message: 'Chat messages cleared successfully' };
-    }
-    return JSON.parse(text);
   } catch (error) {
     console.error('Error clearing chat messages:', error);
-    console.log('Returning mock response');
     return { success: true, message: 'Chat messages cleared successfully (mock)' };
   }
 };
 
-// Update a user (admin only)
+/**
+ * Update a user (admin only)
+ * @param {number} userId - ID of the user to update
+ * @param {Object} data - Data to update
+ * @returns {Promise<Object>} Updated user data
+ */
 export const updateUser = async (userId, data) => {
   try {
-    // Direct connection to the backend API
-    const responseData = await fetchWithAuth(`${API_URL}/admin/users/${userId}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-    
-    return responseData || { ...data, id: userId, message: 'User updated successfully' };
+    return await fetchWithFallback(
+      ENDPOINTS.ADMIN_USER(userId),
+      {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      },
+      { ...data, id: userId, message: 'User updated successfully (mock)' }
+    );
   } catch (error) {
     console.error('Error updating user:', error);
-    console.log('Returning mock response');
     return { ...data, id: userId, message: 'User updated successfully (mock)' };
   }
 };
 
-// Delete a user (admin only)
+/**
+ * Delete a user (admin only)
+ * @param {number} userId - ID of the user to delete
+ * @returns {Promise<Object>} Status of the operation
+ */
 export const deleteUser = async (userId) => {
   try {
-    // Direct connection to the backend API
-    const data = await fetchWithAuth(`${API_URL}/admin/users/${userId}`, {
-      method: 'DELETE',
-    });
-    
-    return data || { message: 'User deleted successfully' };
+    return await fetchWithFallback(
+      ENDPOINTS.ADMIN_USER(userId),
+      { method: 'DELETE' },
+      { message: 'User deleted successfully (mock)' }
+    );
   } catch (error) {
     console.error('Error deleting user:', error);
-    console.log('Returning mock response');
     return { success: true, message: 'User deleted successfully (mock)' };
   }
 };

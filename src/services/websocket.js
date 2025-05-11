@@ -1,5 +1,9 @@
-// WebSocket service for real-time updates
+/**
+ * WebSocket service for real-time updates
+ * Provides WebSocket connection and message handling for the application
+ */
 import { getToken } from './auth';
+import { WS_URL } from '../config/api';
 
 let socket = null;
 let listeners = {};
@@ -27,15 +31,10 @@ export const initWebSocket = () => {
   }
 
   // Create WebSocket connection with token
-  // Get the backend URL from environment or default to Railway URL
-  const apiUrl = process.env.REACT_APP_API_URL || 'https://web-copy-production-5b48.up.railway.app';
-
-  // Replace http/https with ws/wss
-  const wsBase = apiUrl.replace(/^http/, 'ws');
-  const wsBase2 = wsBase.replace(/^https/, 'wss');
+  // Use the centralized WebSocket URL from config/api.js
 
   // Create the WebSocket URL with token for authentication
-  const wsUrl = `${wsBase2}/ws?token=${token}`;
+  const wsUrl = `${WS_URL}?token=${token}`;
 
   console.log('Connecting to WebSocket:', wsUrl);
 
