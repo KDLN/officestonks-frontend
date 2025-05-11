@@ -1,13 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import './Admin.css';
-import { resetStockPrices, clearAllChats } from '../services/admin';
+import { resetStockPrices, clearAllChats, debugAdminToken } from '../services/admin';
 
 const Admin = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mockMode, setMockMode] = useState(false);
+
+  // Check if we're in mock mode on component mount
+  useEffect(() => {
+    const checkMockMode = async () => {
+      try {
+        const debugInfo = await debugAdminToken();
+        const isMockMode = debugInfo?.mockMode === true;
+        setMockMode(isMockMode);
+
+        if (isMockMode) {
+          console.log('Admin panel running in mock mode due to API connection issues');
+        }
+      } catch (error) {
+        console.error('Error checking mock mode:', error);
+        setMockMode(true); // Default to mock mode if check fails
+      }
+    };
+
+    checkMockMode();
+  }, []);
 
   // Reset stock prices
   const handleResetStocks = async () => {
@@ -62,7 +83,14 @@ const Admin = () => {
       <Navigation />
       <div className="admin-container">
         <h1>Admin Dashboard</h1>
-        
+
+        {mockMode && (
+          <div className="mock-mode-banner">
+            <p>⚠️ Running in Mock Mode: Backend connection unavailable</p>
+            <p>Changes will be stored locally but not sent to the server.</p>
+          </div>
+        )}
+
         {message && <div className="success-message">{message}</div>}
         {error && <div className="error-message">{error}</div>}
         

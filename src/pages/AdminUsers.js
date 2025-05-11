@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import Navigation from '../components/Navigation';
 import './Admin.css';
-import { getAllUsers, updateUser, deleteUser } from '../services/admin';
+import { getAllUsers, updateUser, deleteUser, debugAdminToken } from '../services/admin';
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [mockMode, setMockMode] = useState(false);
   
   // Edit user modal state
   const [showModal, setShowModal] = useState(false);
@@ -36,9 +37,27 @@ const AdminUsers = () => {
     }
   };
 
-  // Load users on component mount
+  // Load users and check mock mode on component mount
   useEffect(() => {
     fetchUsers();
+
+    // Check if we're in mock mode
+    const checkMockMode = async () => {
+      try {
+        const debugInfo = await debugAdminToken();
+        const isMockMode = debugInfo?.mockMode === true;
+        setMockMode(isMockMode);
+
+        if (isMockMode) {
+          console.log('Admin Users panel running in mock mode due to API connection issues');
+        }
+      } catch (error) {
+        console.error('Error checking mock mode:', error);
+        setMockMode(true); // Default to mock mode if check fails
+      }
+    };
+
+    checkMockMode();
   }, []);
 
   // Handle opening edit modal
@@ -110,7 +129,14 @@ const AdminUsers = () => {
       <Navigation />
       <div className="admin-container">
         <h1>User Management</h1>
-        
+
+        {mockMode && (
+          <div className="mock-mode-banner">
+            <p>⚠️ Running in Mock Mode: Backend connection unavailable</p>
+            <p>Changes will be stored locally but not sent to the server.</p>
+          </div>
+        )}
+
         {message && <div className="success-message">{message}</div>}
         {error && <div className="error-message">{error}</div>}
         
