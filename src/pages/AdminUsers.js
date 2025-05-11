@@ -37,27 +37,13 @@ const AdminUsers = () => {
     }
   };
 
-  // Load users and check mock mode on component mount
+  // Load users and force live mode with special token
   useEffect(() => {
     fetchUsers();
 
-    // Check if we're in mock mode
-    const checkMockMode = async () => {
-      try {
-        const debugInfo = await debugAdminToken();
-        const isMockMode = debugInfo?.mockMode === true;
-        setMockMode(isMockMode);
-
-        if (isMockMode) {
-          console.log('Admin Users panel running in mock mode due to API connection issues');
-        }
-      } catch (error) {
-        console.error('Error checking mock mode:', error);
-        setMockMode(true); // Default to mock mode if check fails
-      }
-    };
-
-    checkMockMode();
+    // Skip checking mock mode to avoid CORS issues
+    setMockMode(false);
+    console.log('Admin Users panel using special debug admin token - bypassing mock mode check');
   }, []);
 
   // Handle opening edit modal

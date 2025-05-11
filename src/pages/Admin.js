@@ -10,24 +10,11 @@ const Admin = () => {
   const [loading, setLoading] = useState(false);
   const [mockMode, setMockMode] = useState(false);
 
-  // Check if we're in mock mode on component mount
+  // Force live mode with special token on component mount
   useEffect(() => {
-    const checkMockMode = async () => {
-      try {
-        const debugInfo = await debugAdminToken();
-        const isMockMode = debugInfo?.mockMode === true;
-        setMockMode(isMockMode);
-
-        if (isMockMode) {
-          console.log('Admin panel running in mock mode due to API connection issues');
-        }
-      } catch (error) {
-        console.error('Error checking mock mode:', error);
-        setMockMode(true); // Default to mock mode if check fails
-      }
-    };
-
-    checkMockMode();
+    // Skip checking mock mode to avoid CORS issues
+    setMockMode(false);
+    console.log('Admin panel using special debug admin token - bypassing mock mode check');
   }, []);
 
   // Reset stock prices
