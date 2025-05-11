@@ -171,7 +171,25 @@ The CORS proxy is deployed at:
 - Source: `/cors-proxy` directory in this repository
 - Environment Variables: `BACKEND_URL=https://web-production-1e26.up.railway.app`
 
+The proxy handles requests to:
+- `/api/*` - Standard API endpoints
+- `/admin/*` - Admin API endpoints (these are mapped to `/api/admin/*` on the backend)
+- `/ws` - WebSocket connections
+
 If you need to modify the proxy server, see the instructions in `/cors-proxy/README.md`.
+
+### Important Note for Admin Panel
+
+When making requests to admin endpoints, use the format:
+```javascript
+// Instead of this:
+fetch(`${API_URL}/admin/users/1`)
+
+// Use this:
+fetch(`${BACKEND_URL}/admin/users/1`)
+```
+
+This ensures the admin routes are correctly proxied. The proxy server will rewrite `/admin/*` to `/api/admin/*` automatically.
 
 ## Additional Information
 

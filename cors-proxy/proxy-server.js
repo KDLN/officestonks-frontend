@@ -69,17 +69,14 @@ app.use('/ws', createProxyMiddleware({
   }
 }));
 
-// API proxy for all other requests
-app.use('/api', createProxyMiddleware({
+// Create proxy middleware configuration for all API routes
+const apiProxyConfig = {
   target: backendUrl,
   changeOrigin: true,
-  pathRewrite: {
-    '^/api': '/api' // Keep the /api path
-  },
   onProxyReq: (proxyReq, req, res) => {
     // Log each API request for debugging
-    console.log(`Proxying API request: ${req.method} ${req.url}`);
-    console.log(`  To: ${backendUrl}${req.url}`);
+    console.log(`Proxying request: ${req.method} ${req.url}`);
+    console.log(`  To: ${backendUrl}${req.path}`);
     console.log(`  From origin: ${req.headers.origin || 'unknown'}`);
 
     // Preserve original headers
@@ -91,6 +88,13 @@ app.use('/api', createProxyMiddleware({
     // Ensure CORS headers are present in the response
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+    // Add headers for preflight requests
+    if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+      res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+    }
 
     // Log response status for debugging
     console.log(`API response status: ${proxyRes.statusCode} for ${req.method} ${req.url}`);
@@ -107,6 +111,22 @@ app.use('/api', createProxyMiddleware({
         path: req.url
       });
     }
+  }
+};
+
+// Handle standard API endpoints
+app.use('/api', createProxyMiddleware({
+  ...apiProxyConfig,
+  pathRewrite: {
+    '^/api': '/api' // Keep the /api path
+  }
+}));
+
+// Handle admin endpoints
+app.use('/admin', createProxyMiddleware({
+  ...apiProxyConfig,
+  pathRewrite: {
+    '^/admin': '/api/admin' // Rewrite /admin to /api/admin
   }
 }));
 
