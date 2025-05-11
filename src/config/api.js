@@ -6,13 +6,14 @@
 // Detect if we're running in localhost
 export const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-// Primary backend API URL with fallback
-export const BACKEND_URL = process.env.REACT_APP_API_URL || 'https://officestonks-proxy-production.up.railway.app';
+// Primary backend API URL with fallback (using the CORS proxy)
+export const BACKEND_URL = process.env.REACT_APP_API_URL || 'https://officestonks-cors-proxy.up.railway.app';
 
 // API route base
 export const API_URL = isLocalhost ? '/api' : `${BACKEND_URL}/api`;
 
-// CORS proxy configuration
+// CORS proxy configuration (not used - we're now using the proxy directly)
+// This is kept for backward compatibility
 export const CORS_PROXY_URL = process.env.REACT_APP_CORS_PROXY_URL || 'https://officestonks-cors-proxy.up.railway.app';
 
 // WebSocket URL (converts HTTP to WS protocol)
