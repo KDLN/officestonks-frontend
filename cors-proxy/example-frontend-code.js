@@ -1,9 +1,7 @@
-/**
- * WebSocket service for real-time updates
- * Provides WebSocket connection and message handling for the application
- *
- * Updated to use the CORS proxy for handling WebSocket connections
- */
+// Example frontend code showing how to use the CORS proxy
+// This should replace the current websocket.js implementation
+
+// Import authentication utilities
 import { getToken } from './auth';
 
 // Connection variables
@@ -13,9 +11,6 @@ let reconnectTimer = null;
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY = 3000; // 3 seconds
-
-// Cache to store latest stock prices across page navigations
-export const stockPriceCache = {};
 
 // Initialize WebSocket connection
 export const initWebSocket = () => {
@@ -35,16 +30,10 @@ export const initWebSocket = () => {
   const apiUrl = process.env.REACT_APP_API_URL || 'https://officestonks-cors-proxy.up.railway.app';
   
   // Check API health through the proxy
-  fetch(`${apiUrl}/api/health`, {
-    method: 'GET',
-    credentials: 'include',
-    headers: {
-      'Accept': 'application/json',
-    }
-  })
+  fetch(`${apiUrl}/api/health`)
     .then(response => {
       if (!response.ok) {
-        console.error(`Backend health check failed: ${response.status} ${response.statusText}`);
+        console.error(`Backend health check failed: ${response.status}`);
       } else {
         console.log('Backend health check passed');
         return response.json();
@@ -55,7 +44,6 @@ export const initWebSocket = () => {
     })
     .catch(error => {
       console.error('Backend health check error:', error);
-      console.error('Backend API server may be unreachable - check server status');
     });
 
   // Replace http/https with ws/wss for WebSocket connection
@@ -66,10 +54,6 @@ export const initWebSocket = () => {
   
   console.log('Connecting to WebSocket:', wsUrl);
   socket = new WebSocket(wsUrl);
-  
-  // Make socket and addListener available globally for other components
-  window.socket = socket;
-  window.addListener = addListener;
   
   // Connection opened
   socket.addEventListener('open', () => {
@@ -85,29 +69,7 @@ export const initWebSocket = () => {
   socket.addEventListener('message', (event) => {
     try {
       console.log('Received WebSocket message:', event.data);
-      
-      // Clean the message string if needed
-      let jsonStr = event.data;
-      if (typeof jsonStr === 'string') {
-        // Remove any BOM and control characters
-        jsonStr = jsonStr.replace(/^\ufeff/, ''); // Remove byte order mark
-        jsonStr = jsonStr.replace(/[\x00-\x1F\x7F-\x9F]/g, ''); // Remove control chars except whitespace
-        jsonStr = jsonStr.trim(); // Remove leading/trailing whitespace
-      }
-      
-      // Parse and process the message
-      const message = JSON.parse(jsonStr);
-      
-      // Update stock price cache if it's a stock update
-      if (message.type === 'stock_update' || (message.id && message.current_price)) {
-        const stockId = message.stock_id || message.id;
-        const price = message.price || message.current_price;
-        
-        if (stockId && price) {
-          // Store the latest price in cache
-          stockPriceCache[stockId] = price;
-        }
-      }
+      const message = JSON.parse(event.data);
       
       // Call listeners for this message type
       if (listeners[message.type]) {
@@ -120,7 +82,6 @@ export const initWebSocket = () => {
       }
     } catch (e) {
       console.error('Error processing WebSocket message:', e);
-      console.error('Message content:', event.data);
     }
   });
   
@@ -134,19 +95,6 @@ export const initWebSocket = () => {
   // Connection error
   socket.addEventListener('error', (error) => {
     console.error('WebSocket error:', error);
-    
-    // Add more detailed error information
-    console.error('WebSocket connection failed - possible CORS issue or server unavailable');
-    console.error('If this is a CORS error, ensure the backend allows WebSocket connections from this origin');
-    console.error('Current origin:', window.location.origin);
-    
-    // Additional troubleshooting information
-    console.error('Check the console logs for detailed error messages about WebSocket connectivity');
-    console.error('Verify that the backend URL is correct - it should match your Railway deployment URL');
-    console.error('Check that the backend service is running using the health check endpoints');
-    console.error('Verify CORS settings if you\'re seeing CORS-related errors');
-    console.error('Check authentication token validity if you\'re seeing authentication errors');
-    
     // Socket will automatically close after error
   });
   
@@ -208,9 +156,4 @@ const reconnect = () => {
     reconnectTimer = null;
     initWebSocket();
   }, RECONNECT_DELAY);
-};
-
-// Get latest price from cache or use default
-export const getLatestPrice = (stockId, defaultPrice) => {
-  return stockId in stockPriceCache ? stockPriceCache[stockId] : defaultPrice;
 };
