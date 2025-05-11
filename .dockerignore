@@ -1,0 +1,21 @@
+# Ignore node_modules (will be installed in the container)
+node_modules
+
+# Ignore development files
+.git
+.gitignore
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Ignore build artifacts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Do NOT ignore these files that are needed for Docker build
+!start.sh
+!nginx.conf
+!package.json
+!package-lock.json
