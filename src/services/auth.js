@@ -39,6 +39,9 @@ export const login = async (username, password) => {
     const data = await fetchWithAuth(ENDPOINTS.LOGIN, {
       method: 'POST',
       body: JSON.stringify({ username, password }),
+      headers: {
+        'Content-Type': 'application/json'
+      }
     });
 
     // Store authentication data

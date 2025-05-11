@@ -38,6 +38,9 @@ export const addAuthToOptions = (options = {}) => {
   // Add auth header if token exists
   if (token) {
     enhancedOptions.headers.Authorization = `Bearer ${token}`;
+    console.log('Adding Authorization header with token:', token.substring(0, 10) + '...');
+  } else {
+    console.log('No token available for Authorization header');
   }
   
   return enhancedOptions;
@@ -146,6 +149,12 @@ export const fetchWithFallback = async (endpoint, options = {}, mockData = null)
       }
     };
 
+    // Add token to Authorization header if available
+    if (token && !corsOptions.headers.Authorization) {
+      corsOptions.headers.Authorization = `Bearer ${token}`;
+      console.log('Adding Authorization header to CORS request');
+    }
+
     const response = await fetch(urlWithToken, corsOptions);
 
     // Handle non-OK responses
@@ -196,6 +205,12 @@ export const fetchWithFallback = async (endpoint, options = {}, mockData = null)
           ...options.headers
         }
       };
+
+      // Add token to Authorization header if available
+      if (token && !noCorsOptions.headers.Authorization) {
+        noCorsOptions.headers.Authorization = `Bearer ${token}`;
+        console.log('Adding Authorization header to no-cors request');
+      }
 
       await fetch(urlWithToken, noCorsOptions);
       console.log('Request sent with no-cors mode (response data unavailable)');
