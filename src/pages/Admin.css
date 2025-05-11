@@ -106,6 +106,21 @@
   font-weight: bold;
 }
 
+.debug-mode-banner {
+  background-color: #cce5ff;
+  color: #004085;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: 4px;
+  border-left: 4px solid #007bff;
+  text-align: center;
+}
+
+.debug-mode-banner p {
+  margin: 0.25rem 0;
+  font-weight: bold;
+}
+
 .user-table {
   width: 100%;
   border-collapse: collapse;

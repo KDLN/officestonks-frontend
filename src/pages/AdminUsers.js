@@ -116,12 +116,10 @@ const AdminUsers = () => {
       <div className="admin-container">
         <h1>User Management</h1>
 
-        {mockMode && (
-          <div className="mock-mode-banner">
-            <p>⚠️ Running in Mock Mode: Backend connection unavailable</p>
-            <p>Changes will be stored locally but not sent to the server.</p>
-          </div>
-        )}
+        <div className="debug-mode-banner">
+          <p>🔧 Admin Debug Mode Enabled</p>
+          <p>Using special admin token with local storage persistence.</p>
+        </div>
 
         {message && <div className="success-message">{message}</div>}
         {error && <div className="error-message">{error}</div>}
