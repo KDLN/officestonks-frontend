@@ -1,6 +1,8 @@
 /**
  * WebSocket service for real-time updates
  * Provides WebSocket connection and message handling for the application
+ *
+ * Updated to use the officestonks-proxy-production.up.railway.app endpoint
  */
 import { getToken } from './auth';
 import { WS_URL, BACKEND_URL, API_URL, ENDPOINTS } from '../config/api';
