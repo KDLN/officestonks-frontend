@@ -5,10 +5,10 @@
 
 import { getToken } from './auth';
 import { fetchWithFallback } from '../utils/http';
-import { ENDPOINTS, BACKEND_URL } from '../config/api';
+import { ENDPOINTS, API_URL } from '../config/api';
 
-// Use direct URLs for admin endpoints with /api/ prefix
-const ADMIN_BASE_URL = `${BACKEND_URL}/api/admin`;
+// API_URL already includes '/api', so we don't need to add it again
+const ADMIN_URL = API_URL; // Don't append /admin
 
 // Mock data for when API calls fail
 const MOCK_ADMIN_USERS = [
@@ -44,8 +44,11 @@ const MOCK_ADMIN_USERS = [
  */
 export const checkAdminStatus = async () => {
   try {
-    // Use direct admin URL
-    const adminUrl = `${ADMIN_BASE_URL}/status`;
+    // Get token for query parameter
+    const token = getToken();
+    
+    // Use complete admin path
+    const adminUrl = `${ADMIN_URL}/admin/status${token ? `?token=${token}` : ''}`;
     console.log('Checking admin status at:', adminUrl);
 
     const result = await fetchWithFallback(
@@ -73,8 +76,11 @@ export const checkAdminStatus = async () => {
  */
 export const getAllUsers = async () => {
   try {
-    // Use direct admin URL
-    const adminUrl = `${ADMIN_BASE_URL}/users`;
+    // Get token for query parameter
+    const token = getToken();
+    
+    // Use complete admin path
+    const adminUrl = `${ADMIN_URL}/admin/users${token ? `?token=${token}` : ''}`;
     console.log('Fetching admin users from:', adminUrl);
 
     return await fetchWithFallback(
@@ -99,15 +105,18 @@ export const resetStockPrices = async () => {
   const successResponse = { message: 'Stock prices reset successfully' };
 
   try {
-    // Use direct admin URL
-    const adminUrl = `${ADMIN_BASE_URL}/stocks/reset`;
+    // Get token for query parameter
+    const token = getToken();
+    
+    // Use complete admin path
+    const adminUrl = `${ADMIN_URL}/admin/stocks/reset`;
     console.log('Resetting stock prices at:', adminUrl);
 
     // Try multiple HTTP methods to handle different API configurations
     // First try GET method
     try {
       return await fetchWithFallback(
-        `${adminUrl}?force=true`,
+        `${adminUrl}?force=true${token ? `&token=${token}` : ''}`,
         {
           method: 'GET',
           credentials: 'include'
@@ -119,7 +128,7 @@ export const resetStockPrices = async () => {
 
       // If GET fails, try POST method
       return await fetchWithFallback(
-        adminUrl,
+        adminUrl + (token ? `?token=${token}` : ''),
         {
           method: 'POST',
           credentials: 'include',
@@ -142,15 +151,18 @@ export const clearAllChats = async () => {
   const successResponse = { message: 'Chat messages cleared successfully' };
 
   try {
-    // Use direct admin URL
-    const adminUrl = `${ADMIN_BASE_URL}/chat/clear`;
+    // Get token for query parameter
+    const token = getToken();
+    
+    // Use complete admin path
+    const adminUrl = `${ADMIN_URL}/admin/chat/clear`;
     console.log('Clearing chat messages at:', adminUrl);
 
     // Try multiple HTTP methods to handle different API configurations
     // First try GET method
     try {
       return await fetchWithFallback(
-        `${adminUrl}?force=true`,
+        `${adminUrl}?force=true${token ? `&token=${token}` : ''}`,
         {
           method: 'GET',
           credentials: 'include'
@@ -162,7 +174,7 @@ export const clearAllChats = async () => {
 
       // If GET fails, try POST method
       return await fetchWithFallback(
-        adminUrl,
+        adminUrl + (token ? `?token=${token}` : ''),
         {
           method: 'POST',
           credentials: 'include',
@@ -185,8 +197,11 @@ export const clearAllChats = async () => {
  */
 export const updateUser = async (userId, data) => {
   try {
-    // Use direct admin URL
-    const adminUrl = `${ADMIN_BASE_URL}/users/${userId}`;
+    // Get token for query parameter
+    const token = getToken();
+    
+    // Use complete admin path
+    const adminUrl = `${ADMIN_URL}/admin/users/${userId}${token ? `?token=${token}` : ''}`;
     console.log('Updating user at:', adminUrl, 'with data:', data);
 
     return await fetchWithFallback(
@@ -211,8 +226,11 @@ export const updateUser = async (userId, data) => {
  */
 export const deleteUser = async (userId) => {
   try {
-    // Use direct admin URL
-    const adminUrl = `${ADMIN_BASE_URL}/users/${userId}`;
+    // Get token for query parameter
+    const token = getToken();
+    
+    // Use complete admin path
+    const adminUrl = `${ADMIN_URL}/admin/users/${userId}${token ? `?token=${token}` : ''}`;
     console.log('Deleting user at:', adminUrl);
 
     return await fetchWithFallback(
