@@ -55,7 +55,11 @@ export const checkAdminStatus = async () => {
       adminUrl,
       {
         method: 'GET',
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
       },
       { isAdmin: true }
     );
@@ -87,7 +91,11 @@ export const getAllUsers = async () => {
       adminUrl,
       {
         method: 'GET',
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
       },
       MOCK_ADMIN_USERS
     );
@@ -119,7 +127,11 @@ export const resetStockPrices = async () => {
         `${adminUrl}?force=true${token ? `&token=${token}` : ''}`,
         {
           method: 'GET',
-          credentials: 'include'
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+          }
         },
         successResponse
       );
@@ -132,6 +144,10 @@ export const resetStockPrices = async () => {
         {
           method: 'POST',
           credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+          },
           body: JSON.stringify({ force: true })
         },
         successResponse
@@ -165,7 +181,11 @@ export const clearAllChats = async () => {
         `${adminUrl}?force=true${token ? `&token=${token}` : ''}`,
         {
           method: 'GET',
-          credentials: 'include'
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+          }
         },
         successResponse
       );
@@ -178,6 +198,10 @@ export const clearAllChats = async () => {
         {
           method: 'POST',
           credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+          },
           body: JSON.stringify({ force: true })
         },
         successResponse
@@ -209,6 +233,10 @@ export const updateUser = async (userId, data) => {
       {
         method: 'PUT',
         credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
         body: JSON.stringify(data)
       },
       { ...data, id: userId, message: 'User updated successfully (mock)' }
@@ -237,7 +265,11 @@ export const deleteUser = async (userId) => {
       adminUrl,
       {
         method: 'DELETE',
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
       },
       { message: 'User deleted successfully (mock)' }
     );
