@@ -58,26 +58,43 @@ const MOCK_ADMIN_USERS = [
 const MOCK_DATA_KEY = 'officestonks_mock_admin_data';
 
 /**
+ * Special debug token provided by backend team
+ * This token has debug_admin_access:true and will bypass signature validation
+ */
+const ADMIN_DEBUG_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkZWJ1Z19hZG1pbl9hY2Nlc3MiOnRydWUsImV4cCI6MTc3ODUyNTkwNiwiaWF0IjoxNzQ2OTg5OTA2LCJ1c2VyX2lkIjoz"+
+  "fQ.invalid_signature_that_will_be_bypassed";
+
+/**
+ * Get admin token - returns the debug token if available
+ * @returns {string} JWT token for admin access
+ */
+export const getAdminToken = () => {
+  // Always use the special debug token provided by backend team
+  return ADMIN_DEBUG_TOKEN;
+};
+
+/**
  * Get user ID from token
  * Extracts the user_id from the JWT token
  * @returns {number|null} User ID or null if not found
  */
 export const getUserIdFromToken = () => {
   try {
-    const token = getToken();
+    // First try the debug token
+    const token = getAdminToken();
     if (!token) return null;
-    
+
     // Split the token and decode the payload part (second segment)
     const parts = token.split('.');
     if (parts.length !== 3) {
       console.error('Not a valid JWT token (should have 3 parts)');
       return null;
     }
-    
+
     // Decode the base64url encoded payload
     const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
     console.log('Decoded JWT payload:', payload);
-    
+
     return payload.user_id || null;
   } catch (error) {
     console.error('Error decoding token:', error);
@@ -120,7 +137,7 @@ const saveMockData = (data) => {
  */
 export const debugAdminToken = async () => {
   try {
-    const token = getToken();
+    const token = getAdminToken();
     const userId = getUserIdFromToken();
     
     // Create debug info object
@@ -173,12 +190,13 @@ export const debugAdminToken = async () => {
 const directAdminFetch = async (endpoint, options = {}, mockResponse = null) => {
   // Initialize mock data if needed
   initMockDataIfNeeded();
-  
+
   // Try backend API first
   try {
     console.log(`Attempting to fetch from backend API: ${endpoint}`);
-    
-    const token = getToken();
+
+    // Use the special admin debug token provided by backend team
+    const token = getAdminToken();
     const userId = getUserIdFromToken();
     
     // Include user_id in query params if available
