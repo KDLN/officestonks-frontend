@@ -50,7 +50,7 @@ export const ENDPOINTS = {
   TRADING: 'trading',
   TRANSACTIONS: 'transactions',
 
-  // Admin endpoints
+  // Admin endpoints (already using relative paths which will be prefixed with API_URL)
   ADMIN_STATUS: 'admin/status',
   ADMIN_USERS: 'admin/users',
   ADMIN_USER: (id) => `admin/users/${id}`,

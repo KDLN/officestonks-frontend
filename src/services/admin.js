@@ -7,8 +7,8 @@ import { getToken } from './auth';
 import { fetchWithFallback } from '../utils/http';
 import { ENDPOINTS, BACKEND_URL } from '../config/api';
 
-// Use direct URLs for admin endpoints
-const ADMIN_BASE_URL = `${BACKEND_URL}/admin`;
+// Use direct URLs for admin endpoints with /api/ prefix
+const ADMIN_BASE_URL = `${BACKEND_URL}/api/admin`;
 
 // Mock data for when API calls fail
 const MOCK_ADMIN_USERS = [
