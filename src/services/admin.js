@@ -8,7 +8,7 @@ import { fetchWithFallback } from '../utils/http';
 import { ENDPOINTS, API_URL } from '../config/api';
 
 // API_URL already includes '/api', so we don't need to add it again
-const ADMIN_URL = API_URL; // Don't append /admin
+const ADMIN_URL = `https://web-production-1e26.up.railway.app/api`;
 
 // Mock data for when API calls fail
 const MOCK_ADMIN_USERS = [
@@ -60,32 +60,46 @@ export const debugAdminToken = async () => {
 };
 
 /**
+ * Make a direct fetch request to admin endpoint
+ * Bypasses the standard fetch utility for debugging purposes
+ */
+const directAdminFetch = async (endpoint, options = {}) => {
+  const token = getToken();
+  const url = `${ADMIN_URL}/${endpoint}${token ? `?token=${token}` : ''}`;
+  
+  console.log(`Direct admin fetch to: ${url}`);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      },
+      mode: 'cors',
+      credentials: 'include'
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error(`Direct admin fetch error: ${error.message}`);
+    throw error;
+  }
+};
+
+/**
  * Check if current user has admin privileges
  * @returns {Promise<boolean>} True if user is admin
  */
 export const checkAdminStatus = async () => {
   try {
-    // Get token for query parameter
-    const token = getToken();
-    
-    // Use complete admin path with token as query parameter only (Option 1)
-    const adminUrl = `${ADMIN_URL}/admin/status${token ? `?token=${token}` : ''}`;
-    console.log('Checking admin status at:', adminUrl);
-
-    const result = await fetchWithFallback(
-      adminUrl,
-      {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-          // Removed Authorization header as per backend recommendation
-        },
-        mode: 'cors'
-      },
-      { isAdmin: true }
-    );
-
+    // Try direct fetch to the admin status endpoint
+    const result = await directAdminFetch('admin/status');
+    console.log('Admin status check result:', result);
     return result?.isAdmin === true;
   } catch (error) {
     console.error('Error checking admin status:', error);
@@ -102,26 +116,10 @@ export const checkAdminStatus = async () => {
  */
 export const getAllUsers = async () => {
   try {
-    // Get token for query parameter
-    const token = getToken();
-    
-    // Use complete admin path with token as query parameter only (Option 1)
-    const adminUrl = `${ADMIN_URL}/admin/users${token ? `?token=${token}` : ''}`;
-    console.log('Fetching admin users from:', adminUrl);
-
-    return await fetchWithFallback(
-      adminUrl,
-      {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-          // Removed Authorization header as per backend recommendation
-        },
-        mode: 'cors'
-      },
-      MOCK_ADMIN_USERS
-    );
+    // Try direct fetch to admin users endpoint
+    const result = await directAdminFetch('admin/users');
+    console.log('Admin users result:', result);
+    return result;
   } catch (error) {
     console.error('Error fetching users:', error);
     return MOCK_ADMIN_USERS;
@@ -136,48 +134,10 @@ export const resetStockPrices = async () => {
   const successResponse = { message: 'Stock prices reset successfully' };
 
   try {
-    // Get token for query parameter
-    const token = getToken();
-    
-    // Use complete admin path with token as query parameter only (Option 1)
-    const adminUrl = `${ADMIN_URL}/admin/stocks/reset`;
-    console.log('Resetting stock prices at:', adminUrl);
-
-    // Try multiple HTTP methods to handle different API configurations
-    // First try GET method
-    try {
-      return await fetchWithFallback(
-        `${adminUrl}?force=true${token ? `&token=${token}` : ''}`,
-        {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json'
-            // Removed Authorization header as per backend recommendation
-          },
-          mode: 'cors'
-        },
-        successResponse
-      );
-    } catch (getError) {
-      console.log('GET request for stock reset failed, trying POST...', getError);
-
-      // If GET fails, try POST method
-      return await fetchWithFallback(
-        adminUrl + (token ? `?token=${token}` : ''),
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json'
-            // Removed Authorization header as per backend recommendation
-          },
-          mode: 'cors',
-          body: JSON.stringify({ force: true })
-        },
-        successResponse
-      );
-    }
+    // Try direct fetch to admin stocks reset endpoint with force parameter
+    const result = await directAdminFetch('admin/stocks/reset?force=true');
+    console.log('Reset stock prices result:', result);
+    return result;
   } catch (error) {
     console.error('Error resetting stock prices:', error);
     return { success: true, message: 'Stock prices have been reset (mock)' };
@@ -192,48 +152,10 @@ export const clearAllChats = async () => {
   const successResponse = { message: 'Chat messages cleared successfully' };
 
   try {
-    // Get token for query parameter
-    const token = getToken();
-    
-    // Use complete admin path with token as query parameter only (Option 1)
-    const adminUrl = `${ADMIN_URL}/admin/chat/clear`;
-    console.log('Clearing chat messages at:', adminUrl);
-
-    // Try multiple HTTP methods to handle different API configurations
-    // First try GET method
-    try {
-      return await fetchWithFallback(
-        `${adminUrl}?force=true${token ? `&token=${token}` : ''}`,
-        {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json'
-            // Removed Authorization header as per backend recommendation
-          },
-          mode: 'cors'
-        },
-        successResponse
-      );
-    } catch (getError) {
-      console.log('GET request for chat clear failed, trying POST...', getError);
-
-      // If GET fails, try POST method
-      return await fetchWithFallback(
-        adminUrl + (token ? `?token=${token}` : ''),
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json'
-            // Removed Authorization header as per backend recommendation
-          },
-          mode: 'cors',
-          body: JSON.stringify({ force: true })
-        },
-        successResponse
-      );
-    }
+    // Try direct fetch to admin chat clear endpoint with force parameter
+    const result = await directAdminFetch('admin/chat/clear?force=true');
+    console.log('Clear chats result:', result);
+    return result;
   } catch (error) {
     console.error('Error clearing chat messages:', error);
     return { success: true, message: 'Chat messages cleared successfully (mock)' };
@@ -248,27 +170,13 @@ export const clearAllChats = async () => {
  */
 export const updateUser = async (userId, data) => {
   try {
-    // Get token for query parameter
-    const token = getToken();
-    
-    // Use complete admin path with token as query parameter only (Option 1)
-    const adminUrl = `${ADMIN_URL}/admin/users/${userId}${token ? `?token=${token}` : ''}`;
-    console.log('Updating user at:', adminUrl, 'with data:', data);
-
-    return await fetchWithFallback(
-      adminUrl,
-      {
-        method: 'PUT',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-          // Removed Authorization header as per backend recommendation
-        },
-        mode: 'cors',
-        body: JSON.stringify(data)
-      },
-      { ...data, id: userId, message: 'User updated successfully (mock)' }
-    );
+    // Try direct fetch to admin user update endpoint
+    const result = await directAdminFetch(`admin/users/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+    console.log('Update user result:', result);
+    return result;
   } catch (error) {
     console.error('Error updating user:', error);
     return { ...data, id: userId, message: 'User updated successfully (mock)' };
@@ -282,26 +190,12 @@ export const updateUser = async (userId, data) => {
  */
 export const deleteUser = async (userId) => {
   try {
-    // Get token for query parameter
-    const token = getToken();
-    
-    // Use complete admin path with token as query parameter only (Option 1)
-    const adminUrl = `${ADMIN_URL}/admin/users/${userId}${token ? `?token=${token}` : ''}`;
-    console.log('Deleting user at:', adminUrl);
-
-    return await fetchWithFallback(
-      adminUrl,
-      {
-        method: 'DELETE',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-          // Removed Authorization header as per backend recommendation
-        },
-        mode: 'cors'
-      },
-      { message: 'User deleted successfully (mock)' }
-    );
+    // Try direct fetch to admin user delete endpoint
+    const result = await directAdminFetch(`admin/users/${userId}`, {
+      method: 'DELETE'
+    });
+    console.log('Delete user result:', result);
+    return result;
   } catch (error) {
     console.error('Error deleting user:', error);
     return { success: true, message: 'User deleted successfully (mock)' };
