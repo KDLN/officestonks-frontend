@@ -33,24 +33,41 @@ export const initWebSocket = () => {
   // Create WebSocket connection with token
   // Use the centralized WebSocket URL from config/api.js
 
-  // First check if the backend is available by making a fetch request to health endpoint
-  fetch(`${API_URL}/${ENDPOINTS.API_HEALTH}`)
+  // First check if the backend API is available
+  fetch(`${API_URL}/${ENDPOINTS.API_HEALTH}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+    }
+  })
     .then(response => {
       if (!response.ok) {
-        console.error(`Backend health check failed: ${response.status}`);
+        console.error(`Backend health check failed: ${response.status} ${response.statusText}`);
       } else {
         console.log('Backend health check passed');
+        return response.json();
       }
+    })
+    .then(data => {
+      if (data) console.log('Backend API status:', data);
     })
     .catch(error => {
       console.error('Backend health check error:', error);
+      console.error('Backend API server may be unreachable - check server status');
     });
 
-  // Also check WebSocket health endpoint
-  fetch(`${BACKEND_URL}/${ENDPOINTS.WS_HEALTH}`)
+  // Also check WebSocket health endpoint with proper error handling
+  fetch(`${BACKEND_URL}/${ENDPOINTS.WS_HEALTH}`, {
+    method: 'GET',
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+    }
+  })
     .then(response => {
       if (!response.ok) {
-        console.error(`WebSocket health check failed: ${response.status}`);
+        console.error(`WebSocket health check failed: ${response.status} ${response.statusText}`);
       } else {
         console.log('WebSocket health check passed');
         return response.json();
@@ -60,7 +77,11 @@ export const initWebSocket = () => {
       if (data) console.log('WebSocket health data:', data);
     })
     .catch(error => {
-      console.error('WebSocket health check error:', error);
+      console.error('WebSocket server health check failed:', error);
+      console.error('WebSocket server may be unreachable');
+
+      // Recommend alternative approach if health check fails
+      console.log('Trying to establish WebSocket connection anyway...');
     });
 
   // Create the WebSocket URL with token for authentication
@@ -197,19 +218,12 @@ export const initWebSocket = () => {
     console.error('If this is a CORS error, ensure the backend allows WebSocket connections from this origin');
     console.error('Current origin:', window.location.origin);
 
-    // Try to diagnose connection issues by checking the server health again
-    fetch(`${BACKEND_URL}/${ENDPOINTS.WS_HEALTH}`)
-      .then(response => {
-        if (!response.ok) {
-          console.error(`WebSocket server appears to be down: ${response.status}`);
-        } else {
-          console.error('WebSocket server is up, but connection failed. Possible CORS or authentication issue.');
-        }
-      })
-      .catch(healthError => {
-        console.error('WebSocket server health check failed:', healthError);
-        console.error('WebSocket server may be unreachable');
-      });
+    // Additional troubleshooting information
+    console.error('Check the console logs for detailed error messages about WebSocket connectivity');
+    console.error('Verify that the backend URL is correct - it should match your Railway deployment URL');
+    console.error('Check that the backend service is running using the health check endpoints');
+    console.error('Verify CORS settings if you\'re seeing CORS-related errors');
+    console.error('Check authentication token validity if you\'re seeing authentication errors');
 
     // Socket will automatically close after error
   });
