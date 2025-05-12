@@ -15,8 +15,8 @@ export const API_URL = isLocalhost ? '/api' : `${BACKEND_URL}/api`;
 // CORS proxy configuration - used for admin functionality
 export const CORS_PROXY_URL = process.env.REACT_APP_CORS_PROXY_URL || 'https://officestonks-proxy-production.up.railway.app';
 
-// WebSocket URL (converts HTTP to WS protocol)
-export const WS_URL = API_URL.replace(/^http/, 'ws').replace('/api', '/ws');
+// WebSocket URL - use the CORS proxy explicitly
+export const WS_URL = CORS_PROXY_URL.replace(/^http/, 'ws') + '/ws';
 
 // Log configuration
 console.log('API Config:', {
