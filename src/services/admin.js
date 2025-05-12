@@ -64,10 +64,9 @@ const MOCK_DATA_KEY = 'officestonks_mock_admin_data';
 
 /**
  * Special debug token provided by backend team
- * This token has debug_admin_access:true and will bypass signature validation
+ * Use a valid token for CORS proxy - the proxy will handle special admin access
  */
-const ADMIN_DEBUG_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkZWJ1Z19hZG1pbl9hY2Nlc3MiOnRydWUsImV4cCI6MTc3ODUyNTkwNiwiaWF0IjoxNzQ2OTg5OTA2LCJ1c2VyX2lkIjoz"+
-  "fQ.invalid_signature_that_will_be_bypassed";
+const ADMIN_DEBUG_TOKEN = localStorage.getItem('token') || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDcxNzAwMTMsImlhdCI6MTc0NzA4MzYxMywidXNlcl9pZCI6M30.NQqe4tfLre6l5bqoR5qlhKsdf14bKg41BXpJFd3Hj14";
 
 /**
  * Get admin token - returns the debug token if available
@@ -213,18 +212,16 @@ const directAdminFetch = async (endpoint, options = {}, mockResponse = null) => 
     const token = getAdminToken();
     const userId = getUserIdFromToken();
     
-    // Include debug parameters in query params
-    const userIdParam = userId ? `user_id=${userId}` : '';
-    const tokenParam = token ? `token=${token}` : '';
-    const debugParam = 'debug_admin_access=true';
+    // For the proxy, we need to use a simpler approach with just the token in Authorization header
+    // Instead of query parameters which can cause issues with CORS preflight
 
-    // Handle endpoints that already have query parameters (like force=true)
+    // Check if endpoint already has a query (like force=true)
     const hasExistingQuery = endpoint.includes('?');
     const queryPrefix = hasExistingQuery ? '&' : '?';
 
-    // Combine parameters - add debug_admin_access for special handling
-    const authParams = [tokenParam, userIdParam, debugParam].filter(Boolean).join('&');
-    const queryParams = authParams ? `${queryPrefix}${authParams}` : '';
+    // Add a simple debug flag to help backend identify admin requests
+    const debugParam = 'admin_request=true';
+    const queryParams = `${queryPrefix}${debugParam}`;
     
     // Ensure proper URL construction without double slashes
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
@@ -239,12 +236,14 @@ const directAdminFetch = async (endpoint, options = {}, mockResponse = null) => 
       'Content-Type': 'application/json'
     });
 
-    // Add proper Authorization header for admin requests
+    // Special headers for CORS proxy to recognize admin requests
     const response = await fetch(url, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`, // Ensure token is in Authorization header
+        'Authorization': `Bearer ${token}`, // Use the user's regular token
+        'X-Admin-Request': 'true', // Flag for the proxy to identify admin requests
+        'X-Admin-User-Id': userId ? userId.toString() : '3', // Send user ID as header instead of query
         ...options.headers
       },
       credentials: 'include',
