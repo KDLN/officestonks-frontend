@@ -6,8 +6,8 @@
 // Detect if we're running in localhost
 export const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-// Primary backend API URL pointing directly to backend
-export const BACKEND_URL = process.env.REACT_APP_API_URL || 'https://officestonks-proxy-production.up.railway.app';
+// Primary backend API URL pointing directly to backend - hardcoded to fix deployment issues
+export const BACKEND_URL = 'https://officestonks-proxy-production.up.railway.app';
 
 // API route base
 export const API_URL = isLocalhost ? '/api' : `${BACKEND_URL}/api`;
