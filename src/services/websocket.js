@@ -30,8 +30,8 @@ export const initWebSocket = () => {
     return;
   }
 
-  // Use direct backend URL for WebSocket connection
-  const apiUrl = process.env.REACT_APP_API_URL || 'https://web-production-1e26.up.railway.app';
+  // Use CORS proxy URL for WebSocket connection
+  const apiUrl = process.env.REACT_APP_API_URL || 'https://officestonks-proxy-production.up.railway.app';
   
   // Check API health directly
   fetch(`${apiUrl}/api/health`, {
