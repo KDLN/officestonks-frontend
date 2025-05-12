@@ -7,8 +7,8 @@ import { getToken, getUserId } from './auth';
 import { fetchWithFallback } from '../utils/http';
 import { ENDPOINTS, API_URL } from '../config/api';
 
-// Use the exact backend URL as provided by the backend team
-const BACKEND_URL = `https://web-production-1e26.up.railway.app`;
+// Use the CORS proxy URL for all admin requests
+const BACKEND_URL = `https://officestonks-cors-proxy.up.railway.app`;
 
 // Enhanced mock data for when API calls fail
 const MOCK_ADMIN_USERS = [
@@ -191,6 +191,15 @@ const directAdminFetch = async (endpoint, options = {}, mockResponse = null) => 
   // Initialize mock data if needed
   initMockDataIfNeeded();
 
+  // Verify admin access before making request
+  const userId = getUserId();
+  const isAdminUser = localStorage.getItem('isAdmin') === 'true';
+
+  if (!userId || !isAdminUser) {
+    console.error('Admin operation attempted without proper admin credentials');
+    throw new Error('Admin access required. Please login with an admin account.');
+  }
+
   // Try backend API first
   try {
     console.log(`Attempting to fetch from backend API: ${endpoint}`);
@@ -217,14 +226,16 @@ const directAdminFetch = async (endpoint, options = {}, mockResponse = null) => 
     console.log(`Direct admin fetch to: ${url}`);
     console.log(`Using user_id: ${userId} from token and debug_admin_access=true, method: ${options.method || 'GET'}`);
 
-    // Try without mode: 'cors' to avoid CORS issues
+    // Add proper Authorization header for admin requests
     const response = await fetch(url, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`, // Ensure token is in Authorization header
         ...options.headers
       },
-      credentials: 'include'
+      credentials: 'include',
+      mode: 'cors' // Explicitly set CORS mode for proxy
     });
     
     if (!response.ok) {
