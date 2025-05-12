@@ -7,13 +7,13 @@ import { getToken, getUserId } from './auth';
 import { fetchWithFallback } from '../utils/http';
 import { ENDPOINTS, API_URL } from '../config/api';
 
-// Use direct backend URL for all admin requests
-const ADMIN_API_URL = `https://web-production-1e26.up.railway.app`;
+// Use the CORS proxy URL for all admin requests
+const ADMIN_API_URL = `https://officestonks-proxy-production.up.railway.app`;
 console.log('======= ADMIN API URL SET TO:', ADMIN_API_URL, '=======');
-// No longer using CORS proxy
-console.log('Admin requests will connect directly to backend');
-// Log a debug message to help track connection issues
-console.log('Backend should have proper CORS headers configured to allow requests from frontend');
+// Force admin requests through the CORS proxy
+console.log('Admin requests will use the CORS proxy to avoid preflight issues');
+// Log a debug message to help track CORS issues
+console.log('Admin requests require special handling through the CORS proxy');
 
 // Enhanced mock data for when API calls fail
 const MOCK_ADMIN_USERS = [
@@ -248,7 +248,8 @@ const directAdminFetch = async (endpoint, options = {}, mockResponse = null) => 
         ...options.headers
       },
       credentials: 'include',
-      mode: 'cors' // Explicitly set CORS mode
+      mode: 'cors', // Explicitly set CORS mode for proxy
+      cache: 'no-cache' // Prevent caching issues with OPTIONS preflight requests
     });
     
     if (!response.ok) {
@@ -272,6 +273,7 @@ const directAdminFetch = async (endpoint, options = {}, mockResponse = null) => 
     if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
       console.error('CORS error detected. Please check CORS proxy configuration.');
       console.error('This may be a CORS preflight issue with OPTIONS requests.');
+      console.error('Make sure you are using the correct CORS proxy URL: ' + ADMIN_API_URL);
       console.error('Current request details:', {
         endpoint,
         method: options.method || 'GET',
