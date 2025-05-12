@@ -212,16 +212,11 @@ const directAdminFetch = async (endpoint, options = {}, mockResponse = null) => 
     const token = getAdminToken();
     const userId = getUserIdFromToken();
     
-    // For the proxy, we need to use a simpler approach with just the token in Authorization header
-    // Instead of query parameters which can cause issues with CORS preflight
+    // Simplify the URL structure as much as possible to avoid CORS issues
+    // Use only the original endpoint without additional parameters
 
-    // Check if endpoint already has a query (like force=true)
-    const hasExistingQuery = endpoint.includes('?');
-    const queryPrefix = hasExistingQuery ? '&' : '?';
-
-    // Add a simple debug flag to help backend identify admin requests
-    const debugParam = 'admin_request=true';
-    const queryParams = `${queryPrefix}${debugParam}`;
+    // Keep only original query parameters if they exist
+    const queryParams = '';
     
     // Ensure proper URL construction without double slashes
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
@@ -236,14 +231,12 @@ const directAdminFetch = async (endpoint, options = {}, mockResponse = null) => 
       'Content-Type': 'application/json'
     });
 
-    // Special headers for CORS proxy to recognize admin requests
+    // Use only standard headers to avoid CORS preflight issues
     const response = await fetch(url, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`, // Use the user's regular token
-        'X-Admin-Request': 'true', // Flag for the proxy to identify admin requests
-        'X-Admin-User-Id': userId ? userId.toString() : '3', // Send user ID as header instead of query
         ...options.headers
       },
       credentials: 'include',
