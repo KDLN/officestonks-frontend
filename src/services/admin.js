@@ -7,13 +7,13 @@ import { getToken, getUserId } from './auth';
 import { fetchWithFallback } from '../utils/http';
 import { ENDPOINTS, API_URL } from '../config/api';
 
-// Use the CORS proxy URL for all admin requests
-const ADMIN_API_URL = `https://officestonks-cors-proxy.up.railway.app`;
+// Use direct backend URL for all admin requests
+const ADMIN_API_URL = `https://web-production-1e26.up.railway.app`;
 console.log('======= ADMIN API URL SET TO:', ADMIN_API_URL, '=======');
-// Force IPv4 connections through the proxy
-console.log('Admin requests will use IPv4 connections through the CORS proxy');
-// Log a debug message to help track CORS issues
-console.log('Any CORS errors may require updating the CORS proxy configuration');
+// No longer using CORS proxy
+console.log('Admin requests will connect directly to backend');
+// Log a debug message to help track connection issues
+console.log('Backend should have proper CORS headers configured to allow requests from frontend');
 
 // Enhanced mock data for when API calls fail
 const MOCK_ADMIN_USERS = [
@@ -248,7 +248,7 @@ const directAdminFetch = async (endpoint, options = {}, mockResponse = null) => 
         ...options.headers
       },
       credentials: 'include',
-      mode: 'cors' // Explicitly set CORS mode for proxy
+      mode: 'cors' // Explicitly set CORS mode
     });
     
     if (!response.ok) {

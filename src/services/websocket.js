@@ -30,14 +30,14 @@ export const initWebSocket = () => {
     return;
   }
 
-  // *** IMPORTANT: USE THE CORS PROXY URL HERE ***
-  // Replace with your actual CORS proxy URL from Railway
-  const apiUrl = process.env.REACT_APP_API_URL || 'https://officestonks-cors-proxy.up.railway.app';
+  // Use direct backend URL for WebSocket connection
+  const apiUrl = process.env.REACT_APP_API_URL || 'https://web-production-1e26.up.railway.app';
   
-  // Check API health through the proxy
+  // Check API health directly
   fetch(`${apiUrl}/api/health`, {
     method: 'GET',
     credentials: 'include',
+    mode: 'cors',
     headers: {
       'Accept': 'application/json',
     }

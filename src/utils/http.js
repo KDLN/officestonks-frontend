@@ -61,6 +61,9 @@ export const fetchWithAuth = async (endpoint, options = {}) => {
   // Add authentication to options
   const enhancedOptions = addAuthToOptions(options);
 
+  // Ensure CORS mode is set
+  enhancedOptions.mode = 'cors';
+
   try {
     const response = await fetch(url, enhancedOptions);
 
@@ -117,29 +120,26 @@ export const fetchWithAuth = async (endpoint, options = {}) => {
 };
 
 /**
- * Fetches data with a fallback to no-cors mode if CORS fails
+ * Fetches data with direct backend connection using CORS
  * @param {string} endpoint - API endpoint to fetch
  * @param {Object} options - Fetch options
  * @param {Object} mockData - Fallback mock data to return if request fails
  * @returns {Promise} Result of the fetch or mock data
  */
 export const fetchWithFallback = async (endpoint, options = {}, mockData = null) => {
-  // Ensure endpoint is properly formatted for the CORS proxy
+  // Ensure endpoint is properly formatted for direct backend URL
   const isFullUrl = endpoint.startsWith('http');
 
-  // For direct API endpoints, add them to the CORS proxy URL
+  // Connect directly to backend API
   const url = isFullUrl
     ? endpoint
-    : `${CORS_PROXY_URL}/${endpoint.replace(/^\/+/, '')}`;
+    : `${API_URL}/${endpoint.replace(/^\/+/, '')}`;
 
-  // Add token as query parameter for CORS proxy
+  // Get authentication token
   const token = getToken();
-  const urlWithToken = token && !url.includes('token=')
-    ? `${url}${url.includes('?') ? '&' : '?'}token=${token}`
-    : url;
 
   try {
-    // First try with regular CORS mode
+    // Set up proper CORS request
     const corsOptions = {
       ...options,
       mode: 'cors',
@@ -155,7 +155,7 @@ export const fetchWithFallback = async (endpoint, options = {}, mockData = null)
       console.log('Adding Authorization header to CORS request');
     }
 
-    const response = await fetch(urlWithToken, corsOptions);
+    const response = await fetch(url, corsOptions);
 
     // Handle non-OK responses
     if (!response.ok) {
@@ -192,44 +192,26 @@ export const fetchWithFallback = async (endpoint, options = {}, mockData = null)
       console.error('Error parsing JSON response:', parseError);
       throw new ApiError('Invalid JSON response from server', 200, { originalText: text });
     }
-  } catch (corsError) {
-    console.log(`CORS request failed, trying no-cors mode:`, corsError);
+  } catch (error) {
+    console.error('API request failed:', error);
 
-    try {
-      // Try with no-cors mode as fallback
-      const noCorsOptions = {
-        ...options,
-        mode: 'no-cors',
-        headers: {
-          ...DEFAULT_HEADERS,
-          ...options.headers
-        }
-      };
-
-      // Add token to Authorization header if available
-      if (token && !noCorsOptions.headers.Authorization) {
-        noCorsOptions.headers.Authorization = `Bearer ${token}`;
-        console.log('Adding Authorization header to no-cors request');
-      }
-
-      await fetch(urlWithToken, noCorsOptions);
-      console.log('Request sent with no-cors mode (response data unavailable)');
-
-      // Return mock data for no-cors mode since we can't read the response
-      return mockData || {
-        success: true,
-        message: 'Operation may have succeeded',
-        mockData: true
-      };
-    } catch (error) {
-      console.error('Both CORS and no-cors requests failed:', error);
-
-      // Throw ApiError with consistent structure
-      throw new ApiError(
-        'Failed to communicate with server',
-        0,
-        { corsError: corsError.toString(), fallbackError: error.toString() }
-      );
+    // Log CORS-specific errors
+    if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
+      console.error('CORS error detected. Verify that the backend has proper CORS headers configured.');
+      console.error('Current request details:', {
+        endpoint,
+        method: options.method || 'GET',
+        url: url,
+        origin: window.location.origin
+      });
     }
+
+    // Return mock data as fallback
+    return mockData || {
+      success: false,
+      message: 'Operation failed - using mock data',
+      mockData: true,
+      error: error.message
+    };
   }
 };
