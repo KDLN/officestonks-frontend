@@ -21,7 +21,7 @@ show_help() {
 
 setup_env() {
     echo "Setting up environment variables..."
-    echo "REACT_APP_API_URL=https://web-production-1e26.up.railway.app" > .env
+    echo "REACT_APP_API_URL=https://officestonks-proxy-production.up.railway.app" > .env
     echo "REACT_APP_USE_CORS_PROXY=true" >> .env
     
     echo "Environment configuration complete."
@@ -58,7 +58,7 @@ deploy_to_railway() {
     
     # Set environment variables in Railway
     echo "Setting environment variables in Railway..."
-    railway variables set REACT_APP_API_URL=https://web-production-1e26.up.railway.app REACT_APP_USE_CORS_PROXY=true
+    railway variables set REACT_APP_API_URL=https://officestonks-proxy-production.up.railway.app REACT_APP_USE_CORS_PROXY=true
     
     # Deploy the frontend
     echo "Deploying frontend to Railway..."
@@ -73,7 +73,7 @@ deploy_to_vercel() {
     echo "=== Office Stonks Frontend Deployment to Vercel ==="
     
     # Ensure .env file is correct
-    echo "REACT_APP_API_URL=https://web-production-1e26.up.railway.app" > .env.production
+    echo "REACT_APP_API_URL=https://officestonks-proxy-production.up.railway.app" > .env.production
     echo "REACT_APP_USE_CORS_PROXY=true" >> .env.production
     
     # Build the app
