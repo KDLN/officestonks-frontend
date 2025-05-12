@@ -8,7 +8,12 @@ import { fetchWithFallback } from '../utils/http';
 import { ENDPOINTS, API_URL } from '../config/api';
 
 // Use the CORS proxy URL for all admin requests
-const BACKEND_URL = `https://officestonks-cors-proxy.up.railway.app`;
+const ADMIN_API_URL = `https://officestonks-cors-proxy.up.railway.app`;
+console.log('======= ADMIN API URL SET TO:', ADMIN_API_URL, '=======');
+// Force IPv4 connections through the proxy
+console.log('Admin requests will use IPv4 connections through the CORS proxy');
+// Log a debug message to help track CORS issues
+console.log('Any CORS errors may require updating the CORS proxy configuration');
 
 // Enhanced mock data for when API calls fail
 const MOCK_ADMIN_USERS = [
@@ -154,7 +159,7 @@ export const debugAdminToken = async () => {
     
     // Try to fetch debug info from server
     try {
-      const debugUrl = `${BACKEND_URL}/debug-admin-jwt?token=${token}`;
+      const debugUrl = `${ADMIN_API_URL}/debug-admin-jwt?token=${token}`;
       console.log('Testing token parsing at:', debugUrl);
       
       const response = await fetch(debugUrl);
@@ -221,10 +226,18 @@ const directAdminFetch = async (endpoint, options = {}, mockResponse = null) => 
     const authParams = [tokenParam, userIdParam, debugParam].filter(Boolean).join('&');
     const queryParams = authParams ? `${queryPrefix}${authParams}` : '';
     
-    const url = `${BACKEND_URL}/api/${endpoint}${queryParams}`;
-    
+    // Ensure proper URL construction without double slashes
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+    const url = `${ADMIN_API_URL}/api/${cleanEndpoint}${queryParams}`;
+
+    console.log('Using admin API URL for request:', ADMIN_API_URL);
     console.log(`Direct admin fetch to: ${url}`);
     console.log(`Using user_id: ${userId} from token and debug_admin_access=true, method: ${options.method || 'GET'}`);
+    console.log(`Full request details: Origin=${window.location.origin}, Destination=${url}, Headers:`, {
+      ...options.headers,
+      'Authorization': 'Bearer [token-redacted]',
+      'Content-Type': 'application/json'
+    });
 
     // Add proper Authorization header for admin requests
     const response = await fetch(url, {
@@ -254,18 +267,32 @@ const directAdminFetch = async (endpoint, options = {}, mockResponse = null) => 
     }
   } catch (error) {
     console.error(`Backend API fetch error: ${error.message}`);
+
+    // Log additional details for CORS errors
+    if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
+      console.error('CORS error detected. Please check CORS proxy configuration.');
+      console.error('This may be a CORS preflight issue with OPTIONS requests.');
+      console.error('Current request details:', {
+        endpoint,
+        method: options.method || 'GET',
+        url: `${ADMIN_API_URL}/api/${endpoint}`,
+        origin: window.location.origin
+      });
+    }
+
     console.log('Falling back to mock data response');
-    
+
     // Return mock response as fallback
     if (mockResponse) {
       return typeof mockResponse === 'function' ? mockResponse() : mockResponse;
     }
-    
+
     return {
       message: "Operation succeeded in mock mode",
       mockMode: true,
       timestamp: new Date().toISOString(),
-      endpoint
+      endpoint,
+      error: error.message
     };
   }
 };

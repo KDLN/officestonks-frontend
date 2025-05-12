@@ -11,7 +11,8 @@ RUN npm install
 COPY . ./
 
 # Build the application for production
-ENV REACT_APP_API_URL=https://web-production-1e26.up.railway.app
+ENV REACT_APP_API_URL=https://officestonks-cors-proxy.up.railway.app
+ENV REACT_APP_USE_CORS_PROXY=true
 RUN npm run build
 
 # Production stage

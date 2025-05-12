@@ -5,12 +5,29 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Enable CORS for all requests
+// Enable CORS for all requests with expanded configuration
 app.use(cors({
-  origin: '*',
+  origin: '*', // Allow all origins
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  credentials: true, // Allow credentials
+  preflightContinue: false, // Handle preflight ourselves
+  optionsSuccessStatus: 204 // Return 204 for preflight success
 }));
+
+// Special handler for OPTIONS requests (preflight)
+app.options('*', (req, res) => {
+  // Set CORS headers for preflight requests
+  const origin = req.headers.origin || '*';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+
+  console.log(`Explicit OPTIONS handler for: ${req.url} from origin: ${origin}`);
+  res.status(204).end();
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -85,19 +102,25 @@ const apiProxyConfig = {
     }
   },
   onProxyRes: (proxyRes, req, res) => {
-    // Ensure CORS headers are present in the response
-    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+    // Always ensure CORS headers are present in every response
+    const origin = req.headers.origin || '*';
+    res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
 
-    // Add headers for preflight requests
+    // Add Vary header to tell browsers to vary the cache based on the Origin header
+    res.setHeader('Vary', 'Origin');
+
+    // For OPTIONS preflight requests, ensure it succeeds without additional processing
     if (req.method === 'OPTIONS') {
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-      res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+      console.log(`Responding to OPTIONS preflight request for ${req.url} from origin: ${origin}`);
+      res.statusCode = 204; // No Content status is standard for successful preflight
     }
 
     // Log response status for debugging
-    console.log(`API response status: ${proxyRes.statusCode} for ${req.method} ${req.url}`);
+    console.log(`API response status: ${proxyRes.statusCode} for ${req.method} ${req.url} from origin: ${origin}`);
   },
   onError: (err, req, res) => {
     console.error('API proxy error:', err);
@@ -122,11 +145,19 @@ app.use('/api', createProxyMiddleware({
   }
 }));
 
-// Handle admin endpoints
+// Handle admin endpoints directly, ensuring they work with or without /api prefix
 app.use('/admin', createProxyMiddleware({
   ...apiProxyConfig,
   pathRewrite: {
     '^/admin': '/api/admin' // Rewrite /admin to /api/admin
+  }
+}));
+
+// Also explicitly handle /api/admin endpoints to ensure both paths work
+app.use('/api/admin', createProxyMiddleware({
+  ...apiProxyConfig,
+  pathRewrite: {
+    '^/api/admin': '/api/admin' // Keep the path as is
   }
 }));
 
