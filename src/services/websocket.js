@@ -30,11 +30,11 @@ export const initWebSocket = () => {
     return;
   }
 
-  // Use CORS proxy URL for WebSocket connection
-  const apiUrl = process.env.REACT_APP_API_URL || 'https://officestonks-proxy-production.up.railway.app';
-  
+  // HARDCODED: Use correct CORS proxy URL for WebSocket connection
+  const proxyUrl = 'https://officestonks-proxy-production.up.railway.app';
+
   // Check API health directly
-  fetch(`${apiUrl}/api/health`, {
+  fetch(`${proxyUrl}/api/health`, {
     method: 'GET',
     credentials: 'include',
     mode: 'cors',
@@ -58,11 +58,11 @@ export const initWebSocket = () => {
       console.error('Backend API server may be unreachable - check server status');
     });
 
-  // Replace http/https with ws/wss for WebSocket connection
-  const wsBase = apiUrl.replace(/^http/, 'ws');
-  
-  // Create the WebSocket URL through the proxy
-  const wsUrl = `${wsBase}/ws?token=${token}`;
+  // HARDCODED: Create the WebSocket URL with explicit proxy URL
+  const wsUrl = `wss://officestonks-proxy-production.up.railway.app/ws?token=${token}`;
+
+  // Log the URL to verify it's correct
+  console.log('HARDCODED WebSocket URL:', wsUrl);
   
   console.log('Connecting to WebSocket:', wsUrl);
   socket = new WebSocket(wsUrl);
