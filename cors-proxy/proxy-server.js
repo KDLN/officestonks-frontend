@@ -7,7 +7,30 @@ const port = process.env.PORT || 3000;
 
 // Enable CORS for all requests with expanded configuration
 app.use(cors({
-  origin: '*', // Allow all origins
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, etc)
+    if (!origin) return callback(null, true);
+    
+    // List of allowed origins for CORS
+    const allowedOrigins = [
+      'https://officestonks-frontend-production.up.railway.app',
+      'https://officestonks-frontend.up.railway.app',
+      'http://localhost:3000'
+    ];
+    
+    // Check if origin is allowed
+    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+      callback(null, origin);
+    } else {
+      // For development, allow any origin
+      if (process.env.NODE_ENV === 'development') {
+        callback(null, origin);
+      } else {
+        console.log(`Origin ${origin} not allowed by CORS`);
+        callback(null, allowedOrigins[0]); // Default to main production origin
+      }
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   credentials: true, // Allow credentials
@@ -18,14 +41,30 @@ app.use(cors({
 // Special handler for OPTIONS requests (preflight)
 app.options('*', (req, res) => {
   // Set CORS headers for preflight requests
-  const origin = req.headers.origin || '*';
-  res.setHeader('Access-Control-Allow-Origin', origin);
+  const origin = req.headers.origin;
+  
+  // List of allowed origins for CORS
+  const allowedOrigins = [
+    'https://officestonks-frontend-production.up.railway.app',
+    'https://officestonks-frontend.up.railway.app',
+    'http://localhost:3000'
+  ];
+  
+  // Check if origin is allowed
+  if (!origin || allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+    res.setHeader('Access-Control-Allow-Origin', origin || allowedOrigins[0]);
+  } else {
+    console.log(`Origin ${origin} not allowed by CORS in preflight`);
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigins[0]);
+  }
+  
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+  res.setHeader('Vary', 'Origin'); // Important when using specific origins
 
-  console.log(`Explicit OPTIONS handler for: ${req.url} from origin: ${origin}`);
+  console.log(`Explicit OPTIONS handler for: ${req.url} from origin: ${origin || 'unknown'}`);
   res.status(204).end();
 });
 
@@ -103,8 +142,23 @@ const apiProxyConfig = {
   },
   onProxyRes: (proxyRes, req, res) => {
     // Always ensure CORS headers are present in every response
-    const origin = req.headers.origin || '*';
-    res.setHeader('Access-Control-Allow-Origin', origin);
+    const origin = req.headers.origin;
+    
+    // List of allowed origins for CORS
+    const allowedOrigins = [
+      'https://officestonks-frontend-production.up.railway.app',
+      'https://officestonks-frontend.up.railway.app',
+      'http://localhost:3000'
+    ];
+    
+    // Check if origin is allowed
+    if (!origin || allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+      res.setHeader('Access-Control-Allow-Origin', origin || allowedOrigins[0]);
+    } else {
+      console.log(`Origin ${origin} not allowed by CORS in response`);
+      res.setHeader('Access-Control-Allow-Origin', allowedOrigins[0]);
+    }
+    
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
@@ -115,12 +169,12 @@ const apiProxyConfig = {
 
     // For OPTIONS preflight requests, ensure it succeeds without additional processing
     if (req.method === 'OPTIONS') {
-      console.log(`Responding to OPTIONS preflight request for ${req.url} from origin: ${origin}`);
+      console.log(`Responding to OPTIONS preflight request for ${req.url} from origin: ${origin || 'unknown'}`);
       res.statusCode = 204; // No Content status is standard for successful preflight
     }
 
     // Log response status for debugging
-    console.log(`API response status: ${proxyRes.statusCode} for ${req.method} ${req.url} from origin: ${origin}`);
+    console.log(`API response status: ${proxyRes.statusCode} for ${req.method} ${req.url} from origin: ${origin || 'unknown'}`);
   },
   onError: (err, req, res) => {
     console.error('API proxy error:', err);

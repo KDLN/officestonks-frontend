@@ -239,7 +239,8 @@ const directAdminFetch = async (endpoint, options = {}, mockResponse = null) => 
         'Authorization': `Bearer ${token}`, // Use the user's regular token
         ...options.headers
       },
-      credentials: 'include',
+      // Use 'same-origin' for credentials mode when same origin, otherwise omit
+      credentials: window.location.origin === ADMIN_API_URL ? 'same-origin' : 'omit',
       mode: 'cors', // Explicitly set CORS mode for proxy
       cache: 'no-cache' // Prevent caching issues with OPTIONS preflight requests
     });
@@ -281,13 +282,43 @@ const directAdminFetch = async (endpoint, options = {}, mockResponse = null) => 
       return typeof mockResponse === 'function' ? mockResponse() : mockResponse;
     }
 
-    return {
-      message: "Operation succeeded in mock mode",
-      mockMode: true,
-      timestamp: new Date().toISOString(),
-      endpoint,
-      error: error.message
-    };
+    // Try one more time with a different approach
+    try {
+      console.log("Retrying with a different approach...");
+      // Use a simpler approach without credentials
+      const retryUrl = `${ADMIN_API_URL}/api/${cleanEndpoint}${queryParams}`;
+      const retryResponse = await fetch(retryUrl, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          ...options.headers
+        },
+        credentials: 'omit', // Important: don't send cookies on retry
+        mode: 'cors'
+      });
+      
+      if (!retryResponse.ok) {
+        throw new Error(`HTTP error ${retryResponse.status} on retry`);
+      }
+      
+      // Parse response
+      const retryData = await retryResponse.json();
+      console.log('Retry succeeded:', retryData);
+      return retryData;
+    } catch (retryError) {
+      console.error('Retry also failed:', retryError);
+      
+      // Finally fall back to mock mode
+      return {
+        message: "Operation succeeded in mock mode",
+        mockMode: true,
+        timestamp: new Date().toISOString(),
+        endpoint,
+        error: error.message,
+        retryError: retryError.message
+      };
+    }
   }
 };
 
