@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OfficeStonks CORS Debug</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+        Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f5f5;
+      color: #333;
+    }
+    h1 {
+      color: #1976d2;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .info {
+      margin-bottom: 20px;
+      padding: 15px;
+      background-color: #e3f2fd;
+      border-left: 5px solid #1976d2;
+      border-radius: 4px;
+    }
+    .test-section {
+      margin-top: 20px;
+      border-top: 1px solid #eee;
+      padding-top: 20px;
+    }
+    code {
+      font-family: monospace;
+      background-color: #f0f0f0;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+    .success {
+      color: #2e7d32;
+    }
+    .error {
+      color: #c62828;
+    }
+    #results {
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      padding: 15px;
+      border-radius: 4px;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 20px;
+      white-space: pre-wrap;
+      font-family: monospace;
+    }
+    button {
+      background-color: #1976d2;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+    }
+    button:hover {
+      background-color: #1565c0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>OfficeStonks CORS Debug Tool</h1>
+    
+    <div class="info">
+      <p>This tool helps diagnose CORS and API connectivity issues between the frontend and backend.</p>
+      <p>Current origin: <code id="origin"></code></p>
+      <p>Backend URL: <code>https://officestonks-backend-production.up.railway.app</code></p>
+      <p>Proxy URL: <code>https://officestonks-proxy-production.up.railway.app</code></p>
+    </div>
+    
+    <div class="test-section">
+      <h2>API Tests</h2>
+      <div>
+        <button id="test-health">Test Health Endpoint</button>
+        <button id="test-news">Test News Endpoint</button>
+        <button id="test-proxy">Test CORS Proxy</button>
+        <button id="run-all">Run All Tests</button>
+      </div>
+      
+      <div id="results">Results will appear here...</div>
+    </div>
+  </div>
+
+  <script>
+    // Set origin
+    document.getElementById('origin').textContent = window.location.origin;
+    
+    // Results area
+    const results = document.getElementById('results');
+    
+    // Log function
+    function log(message, isError = false) {
+      const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+      results.innerHTML += `[${timestamp}] ${isError ? '❌ ' : '✅ '}${message}\n`;
+      results.scrollTop = results.scrollHeight;
+    }
+    
+    // Clear results
+    function clearResults() {
+      results.innerHTML = '';
+    }
+    
+    // Backend URLs
+    const backendUrl = 'https://officestonks-backend-production.up.railway.app';
+    const proxyUrl = 'https://officestonks-proxy-production.up.railway.app';
+    
+    // Test health endpoint
+    async function testHealth() {
+      try {
+        log('Testing health endpoint...');
+        const response = await fetch(`${proxyUrl}/health`, {
+          method: 'GET',
+          mode: 'cors',
+          headers: { 'Accept': 'application/json' }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          log(`Health check successful: ${JSON.stringify(data)}`);
+        } else {
+          log(`Health check failed: ${response.status} ${response.statusText}`, true);
+        }
+      } catch (error) {
+        log(`Health check error: ${error.message}`, true);
+      }
+    }
+    
+    // Test news endpoint
+    async function testNews() {
+      try {
+        log('Testing news endpoint...');
+        const response = await fetch(`${proxyUrl}/api/news?limit=3`, {
+          method: 'GET',
+          mode: 'cors',
+          headers: { 'Accept': 'application/json' }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          const count = Array.isArray(data) ? data.length : 'not an array';
+          log(`News endpoint successful: ${count} items returned`);
+        } else {
+          log(`News endpoint failed: ${response.status} ${response.statusText}`, true);
+        }
+      } catch (error) {
+        log(`News endpoint error: ${error.message}`, true);
+      }
+    }
+    
+    // Test CORS proxy
+    async function testProxy() {
+      try {
+        log('Testing CORS proxy health-direct endpoint...');
+        const response = await fetch(`${proxyUrl}/api/health-direct`, {
+          method: 'GET',
+          mode: 'cors',
+          headers: { 'Accept': 'application/json' }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          log(`CORS proxy successful: ${JSON.stringify(data)}`);
+        } else {
+          log(`CORS proxy failed: ${response.status} ${response.statusText}`, true);
+        }
+      } catch (error) {
+        log(`CORS proxy error: ${error.message}`, true);
+      }
+    }
+    
+    // Run all tests
+    async function runAllTests() {
+      clearResults();
+      log('Starting all tests...');
+      await testHealth();
+      await testNews();
+      await testProxy();
+      log('All tests completed.');
+    }
+    
+    // Add event listeners
+    document.getElementById('test-health').addEventListener('click', () => {
+      clearResults();
+      testHealth();
+    });
+    
+    document.getElementById('test-news').addEventListener('click', () => {
+      clearResults();
+      testNews();
+    });
+    
+    document.getElementById('test-proxy').addEventListener('click', () => {
+      clearResults();
+      testProxy();
+    });
+    
+    document.getElementById('run-all').addEventListener('click', runAllTests);
+    
+    // Load debug script
+    const debugScript = document.createElement('script');
+    debugScript.src = 'cors-debug.js';
+    document.body.appendChild(debugScript);
+  </script>
+</body>
+</html>

@@ -30,6 +30,15 @@ console.log('API Config:', {
   WS_URL
 });
 
+// Add a test URL to verify path formatting
+const testEndpoint = 'news';
+const testPathConstructed = `${API_URL}/${testEndpoint.replace(/^\/+/, '')}`;
+console.log('Test URL construction:', {
+  API_URL,
+  testEndpoint,
+  testPathConstructed
+});
+
 // Default request configuration
 export const DEFAULT_HEADERS = {
   'Content-Type': 'application/json'

@@ -53,10 +53,21 @@ export const addAuthToOptions = (options = {}) => {
  * @returns {Promise} Fetch promise
  */
 export const fetchWithAuth = async (endpoint, options = {}) => {
-  // Ensure endpoint is properly formatted
-  const url = endpoint.startsWith('http')
-    ? endpoint
-    : `${API_URL}/${endpoint.replace(/^\/+/, '')}`;
+  // Ensure endpoint is properly formatted - IMPORTANT: avoid path duplication
+  // Log all parameters for debugging
+  console.log('fetchWithAuth request:', { endpoint, API_URL });
+  
+  // Format URL correctly
+  let url;
+  if (endpoint.startsWith('http')) {
+    url = endpoint; // Use full URL directly
+  } else {
+    // Remove leading slashes to avoid path duplication
+    const cleanEndpoint = endpoint.replace(/^\/+/, '');
+    url = `${API_URL}/${cleanEndpoint}`;
+  }
+  
+  console.log('Constructed URL:', url);
 
   // Add authentication to options
   const enhancedOptions = addAuthToOptions(options);

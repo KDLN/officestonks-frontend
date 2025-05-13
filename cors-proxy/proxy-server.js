@@ -78,8 +78,8 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Configure proxy middleware
-const backendUrl = process.env.BACKEND_URL || 'https://web-production-1e26.up.railway.app';
+// Configure proxy middleware - make sure it points to the correct backend URL
+const backendUrl = process.env.BACKEND_URL || 'https://officestonks-backend-production.up.railway.app';
 console.log(`Proxy configured to forward requests to: ${backendUrl}`);
 
 // Log all requests
@@ -125,6 +125,36 @@ app.use('/ws', createProxyMiddleware({
     console.log(`WebSocket response status: ${proxyRes.statusCode}`);
   }
 }));
+
+// Add a direct endpoint for accessing the backend health check endpoint
+app.get('/api/health-direct', (req, res) => {
+  // Forward to backend health check
+  fetch(`${backendUrl}/api/health`, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Origin': req.headers.origin || 'https://officestonks-frontend-production.up.railway.app'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    res.json({
+      proxy_status: 'ok',
+      backend_health: data,
+      backend_url: backendUrl,
+      timestamp: new Date().toISOString()
+    });
+  })
+  .catch(error => {
+    res.status(500).json({
+      proxy_status: 'ok',
+      backend_status: 'error',
+      error: error.message,
+      backend_url: backendUrl,
+      timestamp: new Date().toISOString()
+    });
+  });
+});
 
 // Create proxy middleware configuration for all API routes
 const apiProxyConfig = {
