@@ -215,11 +215,12 @@ const directAdminFetch = async (endpoint, options = {}, mockResponse = null) => 
     // Simplify the URL structure as much as possible to avoid CORS issues
     // Use only the original endpoint without additional parameters
 
-    // Keep only original query parameters if they exist
-    const queryParams = '';
-    
     // Ensure proper URL construction without double slashes
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+    
+    // Keep original query parameters if they exist (empty string by default)
+    const queryParams = '';
+    
     const url = `${ADMIN_API_URL}/api/${cleanEndpoint}${queryParams}`;
 
     console.log('Using admin API URL for request:', ADMIN_API_URL);
@@ -286,12 +287,12 @@ const directAdminFetch = async (endpoint, options = {}, mockResponse = null) => 
     try {
       console.log("Retrying with a different approach...");
       // Use a simpler approach without credentials
-      const retryUrl = `${ADMIN_API_URL}/api/${cleanEndpoint}${queryParams}`;
+      const retryUrl = `${ADMIN_API_URL}/api/${endpoint}`;
       const retryResponse = await fetch(retryUrl, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${getAdminToken()}`,
           ...options.headers
         },
         credentials: 'omit', // Important: don't send cookies on retry
