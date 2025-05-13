@@ -180,7 +180,20 @@ const Dashboard = () => {
     // This ensures we'll have constant market events even if backend is unavailable
     // The event generator will automatically create WebSocket-like events
     console.log('Starting market event generator for continuous news updates');
-    startEventGenerator();
+    
+    // Start event generator with a callback to directly update the news feed
+    // This provides a direct pathway for events to reach the NewsFeed component
+    startEventGenerator(10000, 30000, (event) => {
+      // We're using the callback feature to ensure events show up
+      console.log('Market event generator callback triggered with event:', event);
+      // We dispatch a real-looking WebSocket event directly to the window
+      window.dispatchEvent(new MessageEvent('message', {
+        data: JSON.stringify({
+          type: event.event_type || 'news_item',
+          ...event
+        })
+      }));
+    });
 
     // Clean up on unmount
     return () => {

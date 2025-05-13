@@ -9,6 +9,26 @@
 
 import { addListener } from './websocket';
 
+// Import the listeners object from websocket.js
+// This is a workaround to directly access the listeners
+let listeners = {};
+try {
+  // This is for development access only
+  if (typeof window !== 'undefined') {
+    // Wait for websocket.js to initialize
+    setTimeout(() => {
+      if (window.websocketListeners) {
+        listeners = window.websocketListeners;
+        console.log('Successfully imported WebSocket listeners');
+      } else {
+        console.warn('WebSocket listeners not available yet');
+      }
+    }, 1000);
+  }
+} catch (e) {
+  console.error('Error accessing WebSocket listeners:', e);
+}
+
 // ===== DATA SOURCES FOR EVENT GENERATION =====
 
 // Common market event templates
@@ -484,18 +504,76 @@ const dispatchWebSocketEvent = (event) => {
   // Determine the appropriate event type based on the event
   const wsEventType = event.event_type || 'news_item';
   
-  // Create a CustomEvent that mimics a WebSocket message
+  // Create the event payload
+  const eventData = {
+    type: wsEventType,
+    ...event
+  };
+  
+  console.log('Dispatching market event:', eventData);
+  
+  // METHOD 1: Create a CustomEvent that mimics a WebSocket message
   const wsEvent = new CustomEvent('message', {
     detail: {
-      data: JSON.stringify({
-        type: wsEventType,
-        ...event
-      })
+      data: JSON.stringify(eventData)
     }
   });
   
   // Dispatch the event to window so WebSocket listeners can catch it
   window.dispatchEvent(wsEvent);
+  
+  // METHOD 2: Directly call any registered listeners for this message type
+  try {
+    // Access listeners from window or the imported object
+    const availableListeners = window.websocketListeners || listeners || {};
+    
+    // Call type-specific listeners
+    if (availableListeners[wsEventType] && availableListeners[wsEventType].length > 0) {
+      console.log(`Calling ${availableListeners[wsEventType].length} listeners for type ${wsEventType}`);
+      availableListeners[wsEventType].forEach(callback => {
+        try {
+          callback(eventData);
+        } catch (err) {
+          console.error(`Error in ${wsEventType} listener:`, err);
+        }
+      });
+    } else {
+      console.log(`No listeners found for type ${wsEventType}`);
+    }
+    
+    // Call wildcard listeners
+    if (availableListeners['*'] && availableListeners['*'].length > 0) {
+      console.log(`Calling ${availableListeners['*'].length} wildcard listeners`);
+      availableListeners['*'].forEach(callback => {
+        try {
+          callback(eventData);
+        } catch (err) {
+          console.error('Error in wildcard listener:', err);
+        }
+      });
+    }
+  } catch (e) {
+    console.error('Error dispatching directly to listeners:', e);
+  }
+  
+  // METHOD 3: Try to simulate a socket message event 
+  if (window.socket) {
+    try {
+      const simulatedEvent = { 
+        data: JSON.stringify(eventData)
+      };
+      
+      // Check if socket has eventListeners property
+      if (typeof window.socket.dispatchEvent === 'function') {
+        const messageEvent = new MessageEvent('message', simulatedEvent);
+        window.socket.dispatchEvent(messageEvent);
+      } else {
+        console.log('Socket doesn\'t have dispatchEvent method, trying manual dispatch');
+      }
+    } catch (e) {
+      console.error('Error simulating WebSocket message event:', e);
+    }
+  }
 };
 
 /**

@@ -15,6 +15,12 @@ let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY = 3000; // 3 seconds
 
+// Expose listeners for direct access by the market event generator
+// This is a development-only feature to allow proper event propagation
+if (typeof window !== 'undefined') {
+  window.websocketListeners = listeners;
+}
+
 // Cache to store latest stock prices across page navigations
 export const stockPriceCache = {};
 
