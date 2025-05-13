@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Feed Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        button:hover {
+            background-color: #0069d9;
+        }
+    </style>
+</head>
+<body>
+    <h1>News Feed Component Test</h1>
+    <p>This page checks if the NewsFeed component is properly included in your application build.</p>
+    
+    <button onclick="checkNewsFeed()">Check News Feed Component</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        async function checkNewsFeed() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="status">Checking application bundle...</div>';
+            
+            try {
+                // Try to fetch the main.js file
+                const response = await fetch('/static/js/main.chunk.js');
+                if (!response.ok) {
+                    resultDiv.innerHTML = '<div class="status error">Failed to load application bundle. Is the application running?</div>';
+                    return;
+                }
+                
+                const text = await response.text();
+                
+                // Check for NewsFeed component
+                const newsFeedFound = text.includes('NewsFeed') || text.includes('News Feed');
+                const newsTabFound = text.includes('Market News') && text.includes('dashboard-tabs');
+                
+                if (newsFeedFound) {
+                    resultDiv.innerHTML = `
+                        <div class="status success">NewsFeed component found in the application bundle!</div>
+                        <p>The component appears to be included in the build. Possible issues:</p>
+                        <ul>
+                            <li>${newsTabFound ? '✅' : '❌'} News tab UI found in Dashboard component</li>
+                            <li>Check if you're logged in when accessing the Dashboard</li>
+                            <li>Check browser console for any errors</li>
+                            <li>Try clicking the "Market News" tab if it's present</li>
+                            <li>Verify that the NewsFeed component is being rendered correctly in Dashboard.js</li>
+                        </ul>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="status error">NewsFeed component NOT found in the application bundle!</div>
+                        <p>Possible issues:</p>
+                        <ul>
+                            <li>The component may not be properly imported in Dashboard.js</li>
+                            <li>Tree-shaking might have removed the component if it's not being used</li>
+                            <li>Build issues may have prevented the component from being included</li>
+                        </ul>
+                    `;
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">Error checking bundle: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

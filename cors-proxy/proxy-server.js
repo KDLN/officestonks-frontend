@@ -35,7 +35,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   credentials: true, // Allow credentials
   preflightContinue: false, // Handle preflight ourselves
-  optionsSuccessStatus: 204 // Return 204 for preflight success
+  optionsSuccessStatus: 204, // Return 204 for preflight success
+  maxAge: 86400 // 24 hours cache for preflight results
 }));
 
 // Special handler for OPTIONS requests (preflight)
