@@ -510,4 +510,187 @@ export const deleteUser = async (userId) => {
     return { success: true, message: 'User deleted successfully (mock mode)' };
   }
 };
-// Version 1.0.2 - CORS handling improved
+/**
+ * Get all stocks (admin view)
+ * @returns {Promise<Array>} List of all stocks
+ */
+export const adminGetAllStocks = async () => {
+  try {
+    // Try direct fetch to admin stocks endpoint
+    const result = await directAdminFetch('admin/stocks', {}, 
+      () => {
+        // Mock response - use basic stocks that we create
+        return [
+          { 
+            id: 1, 
+            symbol: "AAPL", 
+            name: "Apple Inc.", 
+            current_price: 175.34,
+            description: "Technology company that designs, manufactures, and markets smartphones, tablets, and computers.",
+            sector: "Technology",
+            volume: 25000000,
+            created_at: new Date().toISOString()
+          },
+          { 
+            id: 2, 
+            symbol: "MSFT", 
+            name: "Microsoft Corporation", 
+            current_price: 320.45,
+            description: "Technology company that develops and supports software and services.",
+            sector: "Technology",
+            volume: 18000000,
+            created_at: new Date().toISOString()
+          },
+          { 
+            id: 3, 
+            symbol: "AMZN", 
+            name: "Amazon.com, Inc.", 
+            current_price: 128.95,
+            description: "E-commerce and cloud computing company.",
+            sector: "Consumer Cyclical",
+            volume: 22000000,
+            created_at: new Date().toISOString()
+          },
+          { 
+            id: 4, 
+            symbol: "GOOGL", 
+            name: "Alphabet Inc.", 
+            current_price: 145.60,
+            description: "Technology company specializing in internet-related services and products.",
+            sector: "Communication Services",
+            volume: 15000000,
+            created_at: new Date().toISOString()
+          },
+          { 
+            id: 5, 
+            symbol: "FB", 
+            name: "Meta Platforms, Inc.", 
+            current_price: 302.75,
+            description: "Social media conglomerate corporation.",
+            sector: "Communication Services",
+            volume: 12000000,
+            created_at: new Date().toISOString()
+          }
+        ]
+      }
+    );
+    
+    console.log('Admin get all stocks result:', result);
+    return Array.isArray(result) ? result : [];
+  } catch (error) {
+    console.error('Error fetching stocks (admin):', error);
+    
+    // Return empty array as fallback
+    return [];
+  }
+};
+
+/**
+ * Create a new stock (admin only)
+ * @param {Object} stockData - Stock data to create
+ * @returns {Promise<Object>} Created stock
+ */
+export const adminCreateStock = async (stockData) => {
+  try {
+    // Mock function for creating a stock
+    const mockFunc = () => {
+      const mockData = getMockData();
+      const newStock = {
+        ...stockData,
+        id: Math.floor(Math.random() * 1000) + 100,
+        created_at: new Date().toISOString()
+      };
+      
+      // Store the mock stock in local storage if needed
+      // This part would be expanded if we implement full mock functionality
+      
+      return { 
+        ...newStock, 
+        message: 'Stock created successfully (mock mode)',
+        mockMode: true,
+        timestamp: new Date().toISOString()
+      };
+    };
+    
+    // Try direct fetch to admin stock create endpoint
+    const result = await directAdminFetch('admin/stocks', {
+      method: 'POST',
+      body: JSON.stringify(stockData)
+    }, mockFunc);
+    
+    console.log('Create stock result:', result);
+    return result;
+  } catch (error) {
+    console.error('Error creating stock:', error);
+    return { 
+      ...stockData, 
+      id: Math.floor(Math.random() * 1000) + 100,
+      message: 'Stock created successfully (mock mode)' 
+    };
+  }
+};
+
+/**
+ * Update a stock (admin only)
+ * @param {number} stockId - ID of the stock to update
+ * @param {Object} stockData - Data to update
+ * @returns {Promise<Object>} Updated stock data
+ */
+export const adminUpdateStock = async (stockId, stockData) => {
+  try {
+    // Mock function to update stock
+    const mockFunc = () => {
+      return { 
+        ...stockData, 
+        id: stockId, 
+        message: 'Stock updated successfully (mock mode)',
+        mockMode: true,
+        timestamp: new Date().toISOString()
+      };
+    };
+    
+    // Try direct fetch to admin stock update endpoint
+    const result = await directAdminFetch(`admin/stocks/${stockId}`, {
+      method: 'PUT',
+      body: JSON.stringify(stockData)
+    }, mockFunc);
+    
+    console.log('Update stock result:', result);
+    return result;
+  } catch (error) {
+    console.error('Error updating stock:', error);
+    return { ...stockData, id: stockId, message: 'Stock updated successfully (mock mode)' };
+  }
+};
+
+/**
+ * Delete a stock (admin only)
+ * @param {number} stockId - ID of the stock to delete
+ * @returns {Promise<Object>} Status of the operation
+ */
+export const adminDeleteStock = async (stockId) => {
+  try {
+    // Mock function for stock deletion
+    const mockFunc = () => {
+      return { 
+        message: 'Stock deleted successfully (mock mode)',
+        deletedId: stockId,
+        mockMode: true,
+        timestamp: new Date().toISOString()
+      };
+    };
+    
+    // Try direct fetch to admin stock delete endpoint
+    const result = await directAdminFetch(`admin/stocks/${stockId}`, {
+      method: 'DELETE'
+    }, mockFunc);
+    
+    console.log('Delete stock result:', result);
+    return result;
+  } catch (error) {
+    console.error('Error deleting stock:', error);
+    return { success: true, message: 'Stock deleted successfully (mock mode)' };
+  }
+};
+
+// Version 1.0.3 - Stock management added

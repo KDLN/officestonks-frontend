@@ -43,6 +43,33 @@ const NewsItem = ({ item }) => {
     );
   };
   
+  // Render impact options if available
+  const renderImpactOptions = () => {
+    if (!item.impact_options || !Array.isArray(item.impact_options) || item.impact_options.length === 0) {
+      return null;
+    }
+    
+    return (
+      <div className="impact-options">
+        <h4>Potential Price Impacts:</h4>
+        <div className="impact-options-list">
+          {item.impact_options.map((option, index) => {
+            const className = option.value >= 0 ? 'positive-impact' : 'negative-impact';
+            return (
+              <div 
+                key={`impact-${index}`} 
+                className={`impact-option ${className} ${option.is_actual ? 'actual-impact' : ''}`}
+              >
+                <span className="impact-value">{option.formatted}</span>
+                {option.is_actual && <span className="actual-marker">✓</span>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+  
   return (
     <div className={`news-item ${importanceClass}`}>
       <div className="news-header" onClick={() => setExpanded(!expanded)}>
@@ -61,6 +88,9 @@ const NewsItem = ({ item }) => {
         <div className="news-content">
           <p className="news-summary">{item.summary}</p>
           {item.body && <div className="news-body">{item.body}</div>}
+          
+          {/* Display impact options if available */}
+          {renderImpactOptions()}
           
           {(item.related_stocks?.length > 0 || item.related_sectors?.length > 0) && (
             <div className="news-related">
@@ -304,7 +334,8 @@ const NewsFeed = ({ stockId, sectorId }) => {
         importance: Math.ceil(Math.abs(message.impact || 0.02) * 50), // Convert impact to 1-5 scale
         event_type: 'market_event',
         published_at: new Date(),
-        price_impact: message.impact
+        price_impact: message.impact,
+        impact_options: message.impact_options || [] // Add impact options if available
       };
       
       // Add to news feed
@@ -329,6 +360,7 @@ const NewsFeed = ({ stockId, sectorId }) => {
           event_type: 'sector_event',
           published_at: new Date(),
           price_impact: message.impact,
+          impact_options: message.impact_options || [], // Add impact options if available
           related_sectors: message.sectors
         };
         
@@ -356,6 +388,7 @@ const NewsFeed = ({ stockId, sectorId }) => {
           event_type: 'company_event',
           published_at: new Date(),
           price_impact: message.impact,
+          impact_options: message.impact_options || [], // Add impact options if available
           related_stocks: message.stock_ids
         };
         
