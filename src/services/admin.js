@@ -508,4 +508,4 @@ export const deleteUser = async (userId) => {
     console.error('Error deleting user:', error);
     return { success: true, message: 'User deleted successfully (mock mode)' };
   }
-};
+};// Version 1.0.1
