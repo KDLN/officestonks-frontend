@@ -21,11 +21,16 @@ const Dashboard = () => {
   const [topStocks, setTopStocks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  // IMPORTANT: News tab is set as default to ensure it's visible on load
-  const [activeTab, setActiveTab] = useState('news'); // 'portfolio', 'news'
+  // Initialize tab state with user preference if available, otherwise default to news
+  const [activeTab, setActiveTab] = useState(() => {
+    // Try to get saved preference from localStorage
+    const savedTab = localStorage.getItem('dashboard_active_tab');
+    console.log('Saved dashboard tab:', savedTab);
+    return savedTab === 'portfolio' ? 'portfolio' : 'news';
+  });
   
   // Log visible message on initial render to verify tab state
-  console.log('Dashboard initialized with active tab:', 'news');
+  console.log('Dashboard initialized with active tab:', activeTab);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -212,14 +217,36 @@ const Dashboard = () => {
         
         <div className="dashboard-tabs">
           <button 
+            id="portfolio-tab-button"
             className={`tab-button ${activeTab === 'portfolio' ? 'active' : ''}`}
-            onClick={() => setActiveTab('portfolio')}
+            onClick={() => {
+              console.log('Switching to portfolio tab');
+              setActiveTab('portfolio');
+              // Save preference
+              try {
+                localStorage.setItem('dashboard_active_tab', 'portfolio');
+                console.log('Saved tab preference: portfolio');
+              } catch (e) {
+                console.warn('Could not save tab preference', e);
+              }
+            }}
           >
             Portfolio & Stocks
           </button>
           <button 
+            id="news-tab-button"
             className={`tab-button ${activeTab === 'news' ? 'active' : ''}`}
-            onClick={() => setActiveTab('news')}
+            onClick={() => {
+              console.log('Switching to news tab');
+              setActiveTab('news');
+              // Save preference
+              try {
+                localStorage.setItem('dashboard_active_tab', 'news');
+                console.log('Saved tab preference: news');
+              } catch (e) {
+                console.warn('Could not save tab preference', e);
+              }
+            }}
             style={{ 
               position: 'relative',
               backgroundColor: activeTab === 'news' ? '#1976d2' : '',
@@ -243,6 +270,13 @@ const Dashboard = () => {
               </span>
             )}
           </button>
+        </div>
+        
+        {/* Debug info for tab rendering */}
+        <div style={{ display: 'none' }}>
+          Current active tab: {activeTab}
+          Should show portfolio: {activeTab === 'portfolio' ? 'Yes' : 'No'}
+          Should show news: {activeTab === 'news' ? 'Yes' : 'No'}
         </div>
         
         {activeTab === 'portfolio' ? (

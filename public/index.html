@@ -39,15 +39,18 @@
         font-size: 10px;
       }
       
-      /* Make sure the news content tab is visible regardless of React state */
+      /* Allow both tab contents to be visible based on React state */
+      /* Remove forced styles that were preventing tab switching */
+      /* Uncomment the lines below to restore the fix if needed */
+      /*
       .news-tab-content {
         display: block !important;
       }
       
-      /* Hide portfolio content if news should be shown */
       .dashboard-content:not(.news-tab-content) {
         display: none !important;
       }
+      */
     </style>
   </head>
   <body>
