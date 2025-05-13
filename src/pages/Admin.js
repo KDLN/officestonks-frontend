@@ -90,14 +90,20 @@ const Admin = () => {
           
           <div className="admin-card">
             <h2>Stock Management</h2>
-            <p>Reset all stock prices to their initial values</p>
-            <button 
-              className="admin-button danger"
-              onClick={handleResetStocks}
-              disabled={loading}
-            >
-              {loading ? 'Processing...' : 'Reset Stock Prices'}
-            </button>
+            <p>Create, update and manage all stocks in the system</p>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '10px' }}>
+              <Link to="/admin/stocks" className="admin-button" style={{ marginBottom: '10px', backgroundColor: '#2ecc71', flex: '1', minWidth: '150px' }}>
+                Manage Stocks
+              </Link>
+              <button 
+                className="admin-button danger"
+                onClick={handleResetStocks}
+                disabled={loading}
+                style={{ flex: '1', minWidth: '150px' }}
+              >
+                {loading ? 'Processing...' : 'Reset Stock Prices'}
+              </button>
+            </div>
           </div>
           
           <div className="admin-card">
