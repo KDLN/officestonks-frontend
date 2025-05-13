@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getRecentNews } from '../services/news';
 import { getNewsViaProxy } from '../services/public-proxy';
 import { addListener } from '../services/websocket';
+import { setEventFrequencyRange } from '../services/market-event-generator';
 import { sampleNewsItems, simulateNewsUpdate } from '../utils/news-test-data';
 import './NewsFeed.css';
 
@@ -89,6 +90,7 @@ const NewsFeed = ({ stockId, sectorId }) => {
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all'); // 'all', 'market', 'sector', 'company'
   const [minImportance, setMinImportance] = useState(1); // 1-5 scale
+  const [newsFrequency, setNewsFrequency] = useState('medium'); // 'slow', 'medium', 'fast'
   
   // Add a reload button functionality
   const reloadNews = async () => {
@@ -508,8 +510,32 @@ const NewsFeed = ({ stockId, sectorId }) => {
             </select>
           </div>
           
-          {/* Spacer div to maintain layout */}
-          <div style={{ marginLeft: 'auto' }}></div>
+          <div className="filter-group">
+            <label htmlFor="frequency-filter">Event Frequency:</label>
+            <select 
+              id="frequency-filter" 
+              value={newsFrequency} 
+              onChange={(e) => {
+                setNewsFrequency(e.target.value);
+                // Update event generator frequency based on selection
+                if (e.target.value === 'slow') {
+                  // Slow: 25-60 seconds
+                  setEventFrequencyRange(25000, 60000);
+                } else if (e.target.value === 'medium') {
+                  // Medium: 10-30 seconds
+                  setEventFrequencyRange(10000, 30000);
+                } else {
+                  // Fast: 5-15 seconds
+                  setEventFrequencyRange(5000, 15000);
+                }
+              }}
+              style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid #ddd' }}
+            >
+              <option value="slow">Slow</option>
+              <option value="medium">Medium</option>
+              <option value="fast">Fast</option>
+            </select>
+          </div>
         </div>
       </div>
       

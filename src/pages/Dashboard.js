@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getUserPortfolio, getTransactionHistory, getAllStocks } from '../services/stock';
 import { initWebSocket, addListener, closeWebSocket, getLatestPrice } from '../services/websocket';
+import { startEventGenerator, stopEventGenerator } from '../services/market-event-generator';
 import Navigation from '../components/Navigation';
 import Chat from '../components/Chat';
 import NewsFeed from '../components/NewsFeed';
@@ -175,10 +176,20 @@ const Dashboard = () => {
       }
     });
 
+    // Start the market event generator after websocket connection is established
+    // This ensures we'll have constant market events even if backend is unavailable
+    // The event generator will automatically create WebSocket-like events
+    console.log('Starting market event generator for continuous news updates');
+    startEventGenerator();
+
     // Clean up on unmount
     return () => {
       removeListener();
       closeWebSocket();
+      
+      // Stop the event generator
+      console.log('Stopping market event generator');
+      stopEventGenerator();
     };
   }, []);
 
