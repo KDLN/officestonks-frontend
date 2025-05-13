@@ -104,13 +104,31 @@ const NewsFeed = ({ stockId, sectorId }) => {
       if (response && (Array.isArray(response) || response.length > 0)) {
         setNews(response);
       } else {
-        setNews(sampleNewsItems);
+        // Make sure the sample data has all needed properties
+        const enhancedSampleItems = sampleNewsItems.map(item => ({
+          ...item,
+          // Ensure published_at is a Date object for consistent rendering
+          published_at: typeof item.published_at === 'string' ? new Date(item.published_at) : item.published_at,
+          // Ensure importance exists (default to 1)
+          importance: item.importance || 1
+        }));
+        setNews(enhancedSampleItems);
+        console.log('Sample data set from reload:', enhancedSampleItems);
       }
     } catch (err) {
       console.error('Manual reload failed:', err);
       setError('Manual reload failed: ' + (err.message || 'Unknown error'));
       // Fall back to sample data
-      setNews(sampleNewsItems);
+      // Make sure the sample data has all needed properties
+      const enhancedSampleItems = sampleNewsItems.map(item => ({
+        ...item,
+        // Ensure published_at is a Date object for consistent rendering
+        published_at: typeof item.published_at === 'string' ? new Date(item.published_at) : item.published_at,
+        // Ensure importance exists (default to 1)
+        importance: item.importance || 1
+      }));
+      setNews(enhancedSampleItems);
+      console.log('Sample data set from error handler:', enhancedSampleItems);
     } finally {
       setLoading(false);
     }
@@ -149,7 +167,16 @@ const NewsFeed = ({ stockId, sectorId }) => {
             setNews(response);
           } else {
             console.warn("NewsFeed: API returned empty or invalid data, falling back to sample data");
-            setNews(sampleNewsItems);
+            // Make sure the sample data has all needed properties
+            const enhancedSampleItems = sampleNewsItems.map(item => ({
+              ...item,
+              // Ensure published_at is a Date object for consistent rendering
+              published_at: typeof item.published_at === 'string' ? new Date(item.published_at) : item.published_at,
+              // Ensure importance exists (default to 1)
+              importance: item.importance || 1
+            }));
+            setNews(enhancedSampleItems);
+            console.log('Sample data set:', enhancedSampleItems);
           }
         } catch (apiError) {
           console.warn('NewsFeed: API fetch failed, using sample data:', apiError);
@@ -172,7 +199,16 @@ const NewsFeed = ({ stockId, sectorId }) => {
           
           // Fall back to sample data if API fetch fails
           console.log("NewsFeed: Loading sample news data instead");
-          setNews(sampleNewsItems);
+          // Make sure the sample data has all needed properties
+          const enhancedSampleItems = sampleNewsItems.map(item => ({
+            ...item,
+            // Ensure published_at is a Date object for consistent rendering
+            published_at: typeof item.published_at === 'string' ? new Date(item.published_at) : item.published_at,
+            // Ensure importance exists (default to 1)
+            importance: item.importance || 1
+          }));
+          setNews(enhancedSampleItems);
+          console.log('Sample data set:', enhancedSampleItems);
         }
         
       } catch (err) {
@@ -181,7 +217,16 @@ const NewsFeed = ({ stockId, sectorId }) => {
         
         // Last resort: use sample data even if everything fails
         console.log("NewsFeed: Using sample data as last resort");
-        setNews(sampleNewsItems);
+        // Make sure the sample data has all needed properties
+        const enhancedSampleItems = sampleNewsItems.map(item => ({
+          ...item,
+          // Ensure published_at is a Date object for consistent rendering
+          published_at: typeof item.published_at === 'string' ? new Date(item.published_at) : item.published_at,
+          // Ensure importance exists (default to 1)
+          importance: item.importance || 1
+        }));
+        setNews(enhancedSampleItems);
+        console.log('Sample data set:', enhancedSampleItems);
       } finally {
         setLoading(false);
       }
@@ -334,8 +379,23 @@ const NewsFeed = ({ stockId, sectorId }) => {
   
   // Filter news items based on current filters
   const filteredNews = news.filter(item => {
-    // Filter by importance
-    if (!item || (item.importance && item.importance < minImportance)) {
+    // Safety check for null/undefined items
+    if (!item) return false;
+    
+    // Create a debug console log to see what's happening
+    console.log('Filtering item:', { 
+      headline: item.headline, 
+      importance: item.importance, 
+      event_type: item.event_type,
+      passes_filter: filter === 'all' || 
+                    (filter === 'market' && item.event_type === 'market_event') ||
+                    (filter === 'sector' && item.event_type === 'sector_event') ||
+                    (filter === 'company' && item.event_type === 'company_event')
+    });
+    
+    // Filter by importance - NOTE: Default to importance 1 if not specified
+    const itemImportance = typeof item.importance === 'number' ? item.importance : 1;
+    if (itemImportance < minImportance) {
       return false;
     }
     
@@ -362,24 +422,57 @@ const NewsFeed = ({ stockId, sectorId }) => {
         <h2>Market News Feed</h2>
         {/* Debug info section - API URL and Connection status */}
         <div className="debug-info" style={{ fontSize: '12px', marginBottom: '10px', color: '#666' }}>
-          <div>Status: {loading ? 'Loading...' : error ? 'Error' : 'Loaded'}</div>
-          <div>Items: {filteredNews.length}</div>
-          {error && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+            <div>Status: {loading ? 'Loading...' : error ? 'Error' : 'Loaded'}</div>
+            <div>
+              Connection: <span style={{
+                color: window.socket && window.socket.readyState === 1 ? '#4caf50' : '#f44336',
+                fontWeight: 'bold'
+              }}>
+                {window.socket ? 
+                  window.socket.readyState === 0 ? 'Connecting...' :
+                  window.socket.readyState === 1 ? 'Connected' :
+                  window.socket.readyState === 2 ? 'Closing' : 'Disconnected'
+                : 'Not initialized'}
+              </span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>Items: <span style={{ fontWeight: 'bold' }}>{filteredNews.length}</span> ({news.length} total)</div>
             <button 
-              onClick={reloadNews}
+              onClick={generateTestNewsItem}
               style={{ 
-                marginTop: '5px', 
+                marginLeft: '10px',
                 padding: '3px 8px', 
                 fontSize: '11px', 
-                background: '#1976d2', 
+                background: '#4caf50', 
                 color: 'white', 
                 border: 'none', 
                 borderRadius: '4px', 
-                cursor: 'pointer' 
+                cursor: 'pointer'
               }}
             >
-              Retry Loading News
+              Add Test Item
             </button>
+          </div>
+          {error && (
+            <div style={{ marginTop: '5px', display: 'flex', justifyContent: 'space-between' }}>
+              <div style={{ color: '#d32f2f', fontSize: '11px' }}>{error}</div>
+              <button 
+                onClick={reloadNews}
+                style={{ 
+                  padding: '3px 8px', 
+                  fontSize: '11px', 
+                  background: '#1976d2', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '4px', 
+                  cursor: 'pointer' 
+                }}
+              >
+                Retry Loading
+              </button>
+            </div>
           )}  
         </div>
         
@@ -415,23 +508,8 @@ const NewsFeed = ({ stockId, sectorId }) => {
             </select>
           </div>
           
-          {/* Test button moved to filter area */}
-          <button 
-            onClick={generateTestNewsItem}
-            style={{ 
-              padding: '6px 12px',
-              background: '#1976d2', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '4px',
-              fontSize: '12px',
-              cursor: 'pointer',
-              marginLeft: 'auto',
-              fontWeight: 'bold'
-            }}
-          >
-            Generate Test News
-          </button>
+          {/* Spacer div to maintain layout */}
+          <div style={{ marginLeft: 'auto' }}></div>
         </div>
       </div>
       
