@@ -92,7 +92,27 @@ const Admin = () => {
             <h2>Stock Management</h2>
             <p>Create, update and manage all stocks in the system</p>
             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '10px' }}>
-              <Link to="/admin/stocks" className="admin-button" style={{ marginBottom: '10px', backgroundColor: '#2ecc71', flex: '1', minWidth: '150px' }}>
+              <Link 
+                to="/admin/stocks" 
+                className="admin-button" 
+                style={{ 
+                  marginBottom: '10px', 
+                  backgroundColor: '#2ecc71', 
+                  flex: '1', 
+                  minWidth: '150px',
+                  fontWeight: 'bold',
+                  fontSize: '1.05em',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                }}
+                onClick={() => {
+                  console.log('Navigating to /admin/stocks');
+                  // Store timestamp in localStorage for debugging navigation
+                  localStorage.setItem('lastStocksNavigation', JSON.stringify({
+                    timestamp: new Date().toISOString(),
+                    from: '/admin'
+                  }));
+                }}
+              >
                 Manage Stocks
               </Link>
               <button 

@@ -379,26 +379,95 @@ export const getAllUsers = async () => {
  */
 export const resetStockPrices = async () => {
   try {
-    // Try direct fetch to admin stocks reset endpoint with force parameter
-    const mockFunc = () => {
-      const mockData = getMockData();
-      mockData.lastReset = new Date().toISOString();
-      saveMockData(mockData);
-      
-      return { 
-        message: 'Stock prices have been reset successfully (mock mode)', 
-        timestamp: new Date().toISOString(),
-        mockMode: true
-      };
-    };
+    console.log('Resetting stock prices...');
+
+    // Get stockPriceCache to reset
+    let stockPriceCache;
+    try {
+      stockPriceCache = require('./websocket').stockPriceCache;
+      console.log('Successfully imported stockPriceCache from websocket.js');
+    } catch (e) {
+      console.warn('Could not import stockPriceCache, will continue without it:', e);
+      stockPriceCache = {};
+    }
     
-    // Try directly with endpoint that includes the force parameter
-    const result = await directAdminFetch('admin/stocks/reset?force=true', {}, mockFunc);
-    console.log('Reset stock prices result:', result);
-    return result;
+    // First attempt API call to reset prices
+    let apiSuccess = false;
+    try {
+      // Try direct fetch to admin stocks reset endpoint with force parameter
+      const result = await directAdminFetch('admin/stocks/reset?force=true', {});
+      console.log('API reset stock prices result:', result);
+      apiSuccess = true;
+    } catch (apiError) {
+      console.warn('API reset failed, using mock reset:', apiError);
+    }
+    
+    // Always reset localStorage stocks regardless of API result
+    // Reset stocks in localStorage
+    let stockCount = 0;
+    try {
+      const mockStocksJson = localStorage.getItem('mockStocksData');
+      if (mockStocksJson) {
+        // Parse the existing stocks
+        const stocks = JSON.parse(mockStocksJson);
+        stockCount = stocks.length;
+        
+        // Reset each stock to its original price
+        const defaultPrices = {
+          "AAPL": 175.34,
+          "MSFT": 320.45,
+          "AMZN": 128.95,
+          "GOOGL": 145.60,
+          "FB": 302.75
+        };
+
+        // Reset the prices (use default prices for known symbols, or set to 100 for custom stocks)
+        const resetStocks = stocks.map(stock => ({
+          ...stock,
+          current_price: defaultPrices[stock.symbol] || 100.00,
+          reset_date: new Date().toISOString()
+        }));
+        
+        // Save updated stocks
+        localStorage.setItem('mockStocksData', JSON.stringify(resetStocks));
+        console.log(`Reset prices for ${stockCount} stocks in localStorage`);
+        
+        // Also reset prices in stockPriceCache
+        if (stockPriceCache) {
+          resetStocks.forEach(stock => {
+            stockPriceCache[stock.id] = stock.current_price;
+          });
+          console.log(`Reset ${Object.keys(stockPriceCache).length} prices in stockPriceCache`);
+        }
+      } else {
+        console.warn('No mockStocksData found in localStorage, nothing to reset');
+      }
+    } catch (e) {
+      console.error('Error resetting localStorage stocks:', e);
+    }
+    
+    // Record the reset in mockData
+    const mockData = getMockData();
+    mockData.lastReset = new Date().toISOString();
+    mockData.resetCount = (mockData.resetCount || 0) + 1;
+    saveMockData(mockData);
+    
+    // Return success result
+    return { 
+      success: true,
+      message: `Stock prices have been reset successfully (${apiSuccess ? 'API + ' : ''}mock mode)`,
+      timestamp: new Date().toISOString(),
+      mockMode: !apiSuccess,
+      stocksReset: stockCount
+    };
   } catch (error) {
     console.error('Error resetting stock prices:', error);
-    return { success: true, message: 'Stock prices have been reset successfully (mock mode)' };
+    return { 
+      success: false, 
+      error: true,
+      message: `Error resetting stock prices: ${error.message}`,
+      timestamp: new Date().toISOString()
+    };
   }
 };
 

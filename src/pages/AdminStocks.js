@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import './Admin.css';
-import { adminGetAllStocks, adminCreateStock, adminUpdateStock, adminDeleteStock, debugAdminToken } from '../services/admin';
+import { 
+  adminGetAllStocks, 
+  adminCreateStock, 
+  adminUpdateStock, 
+  adminDeleteStock, 
+  resetStockPrices,
+  debugAdminToken 
+} from '../services/admin';
 
 const AdminStocks = () => {
   const [stocks, setStocks] = useState([]);
@@ -70,12 +78,32 @@ const AdminStocks = () => {
 
   // Load stocks and force live mode with special token
   useEffect(() => {
+    console.log('==== AdminStocks component mounted ====');
+    
+    // Log navigation information if available
+    try {
+      const navInfo = localStorage.getItem('lastStocksNavigation');
+      if (navInfo) {
+        const parsed = JSON.parse(navInfo);
+        console.log('Navigation info:', parsed);
+        // Calculate time since navigation
+        const navTime = new Date(parsed.timestamp);
+        const elapsed = new Date() - navTime;
+        console.log(`Time since navigation: ${elapsed}ms`);
+      }
+    } catch (e) {
+      console.error('Error parsing navigation info:', e);
+    }
+    
     // Add navigation guard to prevent redirects
     const loadData = async () => {
       try {
+        console.log('AdminStocks - Starting to load data');
+        
         // Make sure user is admin before proceeding
         const isAdminUser = localStorage.getItem('isAdmin') === 'true';
         const userId = localStorage.getItem('userId');
+        console.log('Auth check:', { isAdminUser, userId });
         
         if (!isAdminUser && userId !== '3') {
           console.error('Non-admin user attempted to access admin stocks page');
@@ -85,9 +113,11 @@ const AdminStocks = () => {
         // Force admin for user ID 3 (KDLN)
         if (userId === '3') {
           localStorage.setItem('isAdmin', 'true');
+          console.log('Force-enabled admin for user KDLN');
         }
         
         // Proceed with data loading
+        console.log('AdminStocks - Fetching stock data');
         await fetchStocks();
         
         // Skip checking mock mode to avoid CORS issues
@@ -100,6 +130,11 @@ const AdminStocks = () => {
     };
     
     loadData();
+    
+    // Add a route change handler to log when we leave this route
+    return () => {
+      console.log('==== AdminStocks component unmounted ====');
+    };
   }, []);
 
   // Handle opening edit modal
@@ -209,6 +244,32 @@ const AdminStocks = () => {
       setLoading(false);
     }
   };
+  
+  // Handle reset stock prices
+  const handleResetPrices = async () => {
+    setLoading(true);
+    setMessage('');
+    setError('');
+    
+    try {
+      console.log('Admin Stocks UI: Calling resetStockPrices()');
+      const result = await resetStockPrices();
+      console.log('Admin Stocks UI: resetStockPrices result:', result);
+      
+      if (result && result.error) {
+        setError(result.message || 'Failed to reset stock prices');
+      } else {
+        setMessage(result?.message || 'Stock prices have been reset successfully.');
+        // Refresh the stock list to show updated prices
+        fetchStocks();
+      }
+    } catch (err) {
+      console.error('Admin Stocks UI: Reset prices error:', err);
+      setError(`Failed to reset stock prices: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="admin-page">
@@ -230,12 +291,22 @@ const AdminStocks = () => {
         {message && <div className="success-message">{message}</div>}
         {error && <div className="error-message">{error}</div>}
         
-        <div className="admin-actions">
+        <div className="admin-actions" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '15px' }}>
           <button 
             className="admin-button create-button"
             onClick={handleCreateClick}
+            style={{ flex: '1', minWidth: '150px' }}
           >
             Create New Stock
+          </button>
+          
+          <button 
+            className="admin-button warning"
+            onClick={handleResetPrices}
+            disabled={loading}
+            style={{ flex: '1', minWidth: '150px', backgroundColor: '#e67e22' }}
+          >
+            {loading ? 'Processing...' : 'Reset All Prices'}
           </button>
         </div>
 
