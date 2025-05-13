@@ -13,6 +13,7 @@ import Transactions from './pages/Transactions';
 import Portfolio from './pages/Portfolio';
 import Admin from './pages/Admin';
 import AdminUsers from './pages/AdminUsers';
+import AdminSystemTweaks from './pages/AdminSystemTweaks';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import { isAuthenticated } from './services/auth';
@@ -36,6 +37,7 @@ function App() {
           {/* Admin routes */}
           <Route path="/admin" element={<AdminRoute element={<Admin />} />} />
           <Route path="/admin/users" element={<AdminRoute element={<AdminUsers />} />} />
+          <Route path="/admin/system-tweaks" element={<AdminRoute element={<AdminSystemTweaks />} />} />
 
           {/* Default redirect */}
           <Route path="*" element={<Navigate to={isAuthenticated() ? "/dashboard" : "/login"} />} />

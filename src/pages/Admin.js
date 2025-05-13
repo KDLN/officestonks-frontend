@@ -111,6 +111,14 @@ const Admin = () => {
               {loading ? 'Processing...' : 'Clear All Chats'}
             </button>
           </div>
+          
+          <div className="admin-card">
+            <h2>System Tweaks</h2>
+            <p>Configure system-wide settings like market event frequency</p>
+            <Link to="/admin/system-tweaks" className="admin-button">
+              System Configuration
+            </Link>
+          </div>
         </div>
       </div>
     </div>

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { getRecentNews } from '../services/news';
 import { getNewsViaProxy } from '../services/public-proxy';
 import { addListener } from '../services/websocket';
-import { setEventFrequencyRange } from '../services/market-event-generator';
 import { sampleNewsItems, simulateNewsUpdate } from '../utils/news-test-data';
 import './NewsFeed.css';
 
@@ -90,7 +89,6 @@ const NewsFeed = ({ stockId, sectorId }) => {
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all'); // 'all', 'market', 'sector', 'company'
   const [minImportance, setMinImportance] = useState(1); // 1-5 scale
-  const [newsFrequency, setNewsFrequency] = useState('medium'); // 'slow', 'medium', 'fast'
   
   // Add a reload button functionality
   const reloadNews = async () => {
@@ -511,23 +509,16 @@ const NewsFeed = ({ stockId, sectorId }) => {
           </div>
           
           <div className="filter-group">
-            <label htmlFor="frequency-filter">Event Frequency:</label>
+            <label htmlFor="frequency-filter">Display Frequency:</label>
             <select 
               id="frequency-filter" 
               value={newsFrequency} 
               onChange={(e) => {
                 setNewsFrequency(e.target.value);
-                // Update event generator frequency based on selection
-                if (e.target.value === 'slow') {
-                  // Slow: 25-60 seconds
-                  setEventFrequencyRange(25000, 60000);
-                } else if (e.target.value === 'medium') {
-                  // Medium: 10-30 seconds
-                  setEventFrequencyRange(10000, 30000);
-                } else {
-                  // Fast: 5-15 seconds
-                  setEventFrequencyRange(5000, 15000);
-                }
+                // Note: This only affects the local display of events, not server-wide impact
+                // We store the user's preference but don't actually change the global event generation
+                // This is important for security - only admins can change server-wide settings
+                console.log(`User changed news frequency preference to ${e.target.value} - this is display only`);
               }}
               style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid #ddd' }}
             >

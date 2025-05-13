@@ -371,6 +371,8 @@ export const generateRandomEvent = () => {
 let eventGeneratorInterval = null;
 let eventFrequency = 10000; // Default: 10 seconds
 let maxEventFrequency = 30000; // Maximum: 30 seconds
+let minImpactPercentage = 1; // Minimum impact: 1%
+let maxImpactPercentage = 7; // Maximum impact: 7%
 let isGenerating = false;
 
 /**
@@ -395,12 +397,25 @@ export const startEventGenerator = (minFrequency = 10000, maxFrequency = 30000, 
     // Generate a random event
     let event = generateRandomEvent();
     
-    // Ensure the event has a meaningful price impact (at least 1%)
-    if (Math.abs(event.price_impact) < 0.01) {
-      // Set a significant impact value (1-7%)
-      const impact = (0.01 + Math.random() * 0.06) * (Math.random() > 0.5 ? 1 : -1);
+    // Get impact settings from local storage if available
+    const storedMinImpact = localStorage.getItem('eventMinImpact');
+    const storedMaxImpact = localStorage.getItem('eventMaxImpact');
+    
+    if (storedMinImpact) minImpactPercentage = Number(storedMinImpact);
+    if (storedMaxImpact) maxImpactPercentage = Number(storedMaxImpact);
+    
+    // Convert percentages to decimal values
+    const minImpact = minImpactPercentage / 100;
+    const maxImpact = maxImpactPercentage / 100;
+    
+    // Ensure the event has a meaningful price impact (within configured range)
+    if (Math.abs(event.price_impact) < minImpact || Math.random() > 0.7) {
+      // Generate random impact within the configured range
+      const impactSize = minImpact + Math.random() * (maxImpact - minImpact);
+      const impact = impactSize * (Math.random() > 0.5 ? 1 : -1);
+      
       event.price_impact = impact;
-      console.log(`Adjusted price impact to ${(impact * 100).toFixed(2)}% to ensure market effect`);
+      console.log(`Adjusted price impact to ${(impact * 100).toFixed(2)}% to ensure market effect (range: ${minImpactPercentage}%-${maxImpactPercentage}%)`);
     }
     
     return event;
@@ -502,6 +517,27 @@ export const setEventFrequencyRange = (minFrequency, maxFrequency) => {
     maxEventFrequency = maxFrequency;
   }
   console.log(`Event frequency range set to ${minFrequency/1000}-${maxEventFrequency/1000} seconds`);
+};
+
+/**
+ * Sets the event price impact range
+ * @param {number} minImpact - Minimum impact percentage (1-15)
+ * @param {number} maxImpact - Maximum impact percentage (1-15)
+ */
+export const setEventImpactRange = (minImpact, maxImpact) => {
+  if (minImpact > maxImpact) {
+    // Swap if min is greater than max
+    [minImpact, maxImpact] = [maxImpact, minImpact];
+  }
+  
+  // Ensure reasonable bounds
+  minImpact = Math.max(0.1, Math.min(15, minImpact));
+  maxImpact = Math.max(minImpact, Math.min(15, maxImpact));
+  
+  minImpactPercentage = minImpact;
+  maxImpactPercentage = maxImpact;
+  
+  console.log(`Event impact range set to ${minImpactPercentage}%-${maxImpactPercentage}%`);
 };
 
 // Auto-start the generator when this module is imported
