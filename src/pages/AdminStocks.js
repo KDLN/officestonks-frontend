@@ -33,11 +33,36 @@ const AdminStocks = () => {
   const fetchStocks = async () => {
     setLoading(true);
     try {
+      console.log('Fetching admin stock list...');
+      
+      // Force admin status for user ID 3 (KDLN)
+      const userId = localStorage.getItem('userId');
+      if (userId === '3') {
+        localStorage.setItem('isAdmin', 'true');
+        console.log('Forced admin status for user KDLN (ID: 3)');
+      }
+      
       const data = await adminGetAllStocks();
+      
+      // Log the response for debugging
+      console.log('Admin stocks data received:', data);
+      
+      // Fallback to empty array if data is invalid
+      if (!Array.isArray(data)) {
+        console.warn('Expected array of stocks but got:', typeof data);
+        setStocks([]);
+        setError('Received invalid data format from server. Using empty stock list.');
+        return;
+      }
+      
       setStocks(data);
       setError('');
     } catch (err) {
-      setError(`Failed to load stocks: ${err.message}`);
+      console.error('Error fetching stocks:', err);
+      setError(`Failed to load stocks: ${err.message || 'Unknown error'}`);
+      
+      // Set empty array for stocks to avoid null reference errors
+      setStocks([]);
     } finally {
       setLoading(false);
     }
@@ -45,11 +70,36 @@ const AdminStocks = () => {
 
   // Load stocks and force live mode with special token
   useEffect(() => {
-    fetchStocks();
-
-    // Skip checking mock mode to avoid CORS issues
-    setMockMode(false);
-    console.log('Admin Stocks panel using special debug admin token - bypassing mock mode check');
+    // Add navigation guard to prevent redirects
+    const loadData = async () => {
+      try {
+        // Make sure user is admin before proceeding
+        const isAdminUser = localStorage.getItem('isAdmin') === 'true';
+        const userId = localStorage.getItem('userId');
+        
+        if (!isAdminUser && userId !== '3') {
+          console.error('Non-admin user attempted to access admin stocks page');
+          return;
+        }
+        
+        // Force admin for user ID 3 (KDLN)
+        if (userId === '3') {
+          localStorage.setItem('isAdmin', 'true');
+        }
+        
+        // Proceed with data loading
+        await fetchStocks();
+        
+        // Skip checking mock mode to avoid CORS issues
+        setMockMode(false);
+        console.log('Admin Stocks panel using special debug admin token - bypassing mock mode check');
+      } catch (err) {
+        console.error('Error initializing AdminStocks page:', err);
+        setError('Failed to load admin stocks page. Please try again.');
+      }
+    };
+    
+    loadData();
   }, []);
 
   // Handle opening edit modal
@@ -165,6 +215,12 @@ const AdminStocks = () => {
       <Navigation />
       <div className="admin-container">
         <h1>Stock Management</h1>
+        
+        <div className="admin-navigation">
+          <Link to="/admin" className="admin-nav-button">
+            ← Back to Admin Dashboard
+          </Link>
+        </div>
 
         <div className="debug-mode-banner">
           <p>🔧 Admin Debug Mode Enabled</p>
