@@ -4,6 +4,7 @@
  *
  * Updated to use the CORS proxy for handling WebSocket connections
  */
+import { useEffect, useCallback } from 'react';
 import { getToken } from './auth';
 
 // Connection variables
@@ -91,7 +92,7 @@ export const initWebSocket = () => {
       if (typeof jsonStr === 'string') {
         // Remove any BOM and control characters
         jsonStr = jsonStr.replace(/^\ufeff/, ''); // Remove byte order mark
-        jsonStr = jsonStr.replace(/[\x00-\x1F\x7F-\x9F]/g, ''); // Remove control chars except whitespace
+        jsonStr = jsonStr.replace(/[\u0000-\u001F\u007F-\u009F]/g, ''); // Remove control chars except whitespace
         jsonStr = jsonStr.trim(); // Remove leading/trailing whitespace
       }
       
@@ -213,4 +214,32 @@ const reconnect = () => {
 // Get latest price from cache or use default
 export const getLatestPrice = (stockId, defaultPrice) => {
   return stockId in stockPriceCache ? stockPriceCache[stockId] : defaultPrice;
+};
+
+// React hook for WebSocket integration
+export const useWebSocket = () => {
+  // Initialize WebSocket connection on component mount
+  useEffect(() => {
+    // Only initialize if no connection exists
+    if (!socket) {
+      initWebSocket();
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      // Don't close the socket on unmount - we want to keep it alive
+      // for other components. Socket will be closed when the user leaves
+      // the app or logs out.
+    };
+  }, []);
+  
+  // Memoize addListener function to prevent unnecessary re-renders
+  const memoizedAddListener = useCallback(addListener, []);
+  
+  return {
+    addListener: memoizedAddListener,
+    removeListener,
+    closeWebSocket,
+    getLatestPrice
+  };
 };

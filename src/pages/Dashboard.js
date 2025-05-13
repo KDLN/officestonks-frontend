@@ -4,6 +4,7 @@ import { getUserPortfolio, getTransactionHistory, getAllStocks } from '../servic
 import { initWebSocket, addListener, closeWebSocket, getLatestPrice } from '../services/websocket';
 import Navigation from '../components/Navigation';
 import Chat from '../components/Chat';
+import NewsFeed from '../components/NewsFeed';
 import './Dashboard.css';
 
 // Default empty states to prevent null references
@@ -20,6 +21,8 @@ const Dashboard = () => {
   const [topStocks, setTopStocks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // Set default tab to 'news' to make the news tab visible by default
+  const [activeTab, setActiveTab] = useState('news'); // 'portfolio', 'news'
 
   useEffect(() => {
     const fetchData = async () => {
@@ -179,6 +182,9 @@ const Dashboard = () => {
     return <div className="error">{error}</div>;
   }
 
+  // Add a visible console log to help debug which tab is active
+  console.log('Current active tab:', activeTab);
+
   return (
     <div className="dashboard-page">
       <Navigation />
@@ -201,134 +207,159 @@ const Dashboard = () => {
           </div>
         </div>
         
-        <div className="dashboard-content">
-          <div className="dashboard-section">
-            <div className="section-header">
-              <h2>Your Portfolio</h2>
-              <Link to="/portfolio" className="view-all">View All</Link>
+        <div className="dashboard-tabs">
+          <button 
+            className={`tab-button ${activeTab === 'portfolio' ? 'active' : ''}`}
+            onClick={() => setActiveTab('portfolio')}
+          >
+            Portfolio & Stocks
+          </button>
+          <button 
+            className={`tab-button ${activeTab === 'news' ? 'active' : ''}`}
+            onClick={() => setActiveTab('news')}
+          >
+            Market News
+          </button>
+        </div>
+        
+        {activeTab === 'portfolio' ? (
+          <div className="dashboard-content">
+            <div className="dashboard-section">
+              <div className="section-header">
+                <h2>Your Portfolio</h2>
+                <Link to="/portfolio" className="view-all">View All</Link>
+              </div>
+              
+              {portfolio?.portfolio_items && portfolio.portfolio_items.length > 0 ? (
+                <div className="portfolio-list">
+                  <table className="dashboard-table">
+                    <thead>
+                      <tr>
+                        <th>Symbol</th>
+                        <th>Shares</th>
+                        <th>Price</th>
+                        <th>Value</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {portfolio.portfolio_items?.slice(0, 3).map(item => item && item.stock ? (
+                        <tr
+                          key={item.stock_id}
+                          className={item.valueChange ? `value-${item.valueChange}` : ''}
+                        >
+                          <td>{item.stock.symbol}</td>
+                          <td>{item.quantity}</td>
+                          <td>${(item.stock.current_price || 0).toFixed(2)}</td>
+                          <td>${(item.quantity * (item.stock.current_price || 0)).toFixed(2)}</td>
+                          <td>
+                            <Link to={`/stock/${item.stock_id}`} className="trade-button">
+                              Trade
+                            </Link>
+                          </td>
+                        </tr>
+                      ) : null)}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="empty-list">
+                  <p>You don't own any stocks yet.</p>
+                  <Link to="/stocks" className="action-button">Start Trading</Link>
+                </div>
+              )}
             </div>
             
-            {portfolio?.portfolio_items && portfolio.portfolio_items.length > 0 ? (
-              <div className="portfolio-list">
+            <div className="dashboard-section">
+              <div className="section-header">
+                <h2>Top Stocks</h2>
+                <Link to="/stocks" className="view-all">View All</Link>
+              </div>
+              
+              <div className="top-stocks-list">
                 <table className="dashboard-table">
                   <thead>
                     <tr>
                       <th>Symbol</th>
-                      <th>Shares</th>
+                      <th>Name</th>
                       <th>Price</th>
-                      <th>Value</th>
                       <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {portfolio.portfolio_items?.slice(0, 3).map(item => item && item.stock ? (
+                    {topStocks && topStocks.length > 0 ? topStocks.map(stock => stock ? (
                       <tr
-                        key={item.stock_id}
-                        className={item.valueChange ? `value-${item.valueChange}` : ''}
+                        key={stock.id}
+                        className={stock.priceChange ? `price-${stock.priceChange}` : ''}
                       >
-                        <td>{item.stock.symbol}</td>
-                        <td>{item.quantity}</td>
-                        <td>${(item.stock.current_price || 0).toFixed(2)}</td>
-                        <td>${(item.quantity * (item.stock.current_price || 0)).toFixed(2)}</td>
+                        <td>{stock.symbol}</td>
+                        <td>{stock.name}</td>
+                        <td>${(stock.current_price || 0).toFixed(2)}</td>
                         <td>
-                          <Link to={`/stock/${item.stock_id}`} className="trade-button">
+                          <Link to={`/stock/${stock.id}`} className="trade-button">
                             Trade
                           </Link>
                         </td>
                       </tr>
-                    ) : null)}
+                    ) : null) : (
+                      <tr>
+                        <td colSpan="4" className="empty-message">No stocks available</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
-            ) : (
-              <div className="empty-list">
-                <p>You don't own any stocks yet.</p>
-                <Link to="/stocks" className="action-button">Start Trading</Link>
+            </div>
+            
+            <div className="dashboard-section">
+              <div className="section-header">
+                <h2>Recent Transactions</h2>
+                <Link to="/transactions" className="view-all">View All</Link>
               </div>
-            )}
-          </div>
-          
-          <div className="dashboard-section">
-            <div className="section-header">
-              <h2>Top Stocks</h2>
-              <Link to="/stocks" className="view-all">View All</Link>
-            </div>
-            
-            <div className="top-stocks-list">
-              <table className="dashboard-table">
-                <thead>
-                  <tr>
-                    <th>Symbol</th>
-                    <th>Name</th>
-                    <th>Price</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topStocks && topStocks.length > 0 ? topStocks.map(stock => stock ? (
-                    <tr
-                      key={stock.id}
-                      className={stock.priceChange ? `price-${stock.priceChange}` : ''}
-                    >
-                      <td>{stock.symbol}</td>
-                      <td>{stock.name}</td>
-                      <td>${(stock.current_price || 0).toFixed(2)}</td>
-                      <td>
-                        <Link to={`/stock/${stock.id}`} className="trade-button">
-                          Trade
-                        </Link>
-                      </td>
-                    </tr>
-                  ) : null) : (
+              
+              <div className="transactions-list">
+                <table className="dashboard-table">
+                  <thead>
                     <tr>
-                      <td colSpan="4" className="empty-message">No stocks available</td>
+                      <th>Date</th>
+                      <th>Stock</th>
+                      <th>Type</th>
+                      <th>Quantity</th>
+                      <th>Price</th>
+                      <th>Total</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {transactions && transactions.length > 0 ? transactions.map(transaction => transaction && transaction.stock ? (
+                      <tr key={transaction.id}>
+                        <td>{new Date(transaction.created_at).toLocaleDateString()}</td>
+                        <td>{transaction.stock.symbol}</td>
+                        <td className={`transaction-type ${transaction.transaction_type}`}>
+                          {transaction.transaction_type}
+                        </td>
+                        <td>{transaction.quantity}</td>
+                        <td>${(transaction.price || 0).toFixed(2)}</td>
+                        <td>${(transaction.quantity * (transaction.price || 0)).toFixed(2)}</td>
+                      </tr>
+                    ) : null) : (
+                      <tr>
+                        <td colSpan="6" className="empty-message">No recent transactions.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-          
-          <div className="dashboard-section">
-            <div className="section-header">
-              <h2>Recent Transactions</h2>
-              <Link to="/transactions" className="view-all">View All</Link>
+        ) : (
+          <div className="dashboard-content news-tab-content">
+            {/* Add a debug message to verify NewsFeed is being included */}
+            <div style={{padding: '10px', background: '#f0f9ff', border: '1px solid #cce5ff', marginBottom: '10px', borderRadius: '4px'}}>
+              News Feed Component should appear below this message. If you don't see it, there might be an error.
             </div>
-            
-            <div className="transactions-list">
-              <table className="dashboard-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Stock</th>
-                    <th>Type</th>
-                    <th>Quantity</th>
-                    <th>Price</th>
-                    <th>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactions && transactions.length > 0 ? transactions.map(transaction => transaction && transaction.stock ? (
-                    <tr key={transaction.id}>
-                      <td>{new Date(transaction.created_at).toLocaleDateString()}</td>
-                      <td>{transaction.stock.symbol}</td>
-                      <td className={`transaction-type ${transaction.transaction_type}`}>
-                        {transaction.transaction_type}
-                      </td>
-                      <td>{transaction.quantity}</td>
-                      <td>${(transaction.price || 0).toFixed(2)}</td>
-                      <td>${(transaction.quantity * (transaction.price || 0)).toFixed(2)}</td>
-                    </tr>
-                  ) : null) : (
-                    <tr>
-                      <td colSpan="6" className="empty-message">No recent transactions.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <NewsFeed />
           </div>
-        </div>
+        )}
       </div>
 
       {/* Chat Component */}

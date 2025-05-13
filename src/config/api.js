@@ -64,3 +64,132 @@ export const ENDPOINTS = {
   API_HEALTH: 'health',
   WS_HEALTH: 'ws/health'
 };
+
+// API helper for making requests
+export const api = {
+  get: async (url, options = {}) => {
+    try {
+      const headers = {
+        ...DEFAULT_HEADERS,
+        ...options.headers
+      };
+
+      // Add auth token if available
+      const token = localStorage.getItem('token');
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(url.startsWith('http') ? url : `${API_URL}/${url.replace(/^\//, '')}`, {
+        method: 'GET',
+        headers,
+        ...options,
+        credentials: options.credentials || 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`API GET Error for ${url}:`, error);
+      throw error;
+    }
+  },
+
+  post: async (url, data, options = {}) => {
+    try {
+      const headers = {
+        ...DEFAULT_HEADERS,
+        ...options.headers
+      };
+
+      // Add auth token if available
+      const token = localStorage.getItem('token');
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(url.startsWith('http') ? url : `${API_URL}/${url.replace(/^\//, '')}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data),
+        ...options,
+        credentials: options.credentials || 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`API POST Error for ${url}:`, error);
+      throw error;
+    }
+  },
+
+  put: async (url, data, options = {}) => {
+    try {
+      const headers = {
+        ...DEFAULT_HEADERS,
+        ...options.headers
+      };
+
+      // Add auth token if available
+      const token = localStorage.getItem('token');
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(url.startsWith('http') ? url : `${API_URL}/${url.replace(/^\//, '')}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(data),
+        ...options,
+        credentials: options.credentials || 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`API PUT Error for ${url}:`, error);
+      throw error;
+    }
+  },
+
+  delete: async (url, options = {}) => {
+    try {
+      const headers = {
+        ...DEFAULT_HEADERS,
+        ...options.headers
+      };
+
+      // Add auth token if available
+      const token = localStorage.getItem('token');
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(url.startsWith('http') ? url : `${API_URL}/${url.replace(/^\//, '')}`, {
+        method: 'DELETE',
+        headers,
+        ...options,
+        credentials: options.credentials || 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`API DELETE Error for ${url}:`, error);
+      throw error;
+    }
+  }
+};
