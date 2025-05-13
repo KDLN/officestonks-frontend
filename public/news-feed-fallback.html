@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>News Feed Fallback</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+        Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+    .news-feed-container {
+      max-width: 800px;
+      margin: 20px auto;
+      background-color: #f8f9fb;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+    .news-feed-header {
+      background-color: #1976d2;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .news-feed-header h2 {
+      margin: 0;
+      font-size: 1.4rem;
+    }
+    .news-feed-content {
+      padding: 20px;
+    }
+    .news-item {
+      border-bottom: 1px solid #eaecef;
+      padding: 15px;
+      transition: background-color 0.2s ease;
+    }
+    .news-item:hover {
+      background-color: #f1f3f5;
+    }
+    .news-headline {
+      margin: 0 0 10px 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #333;
+    }
+    .news-date {
+      font-size: 0.8rem;
+      color: #666;
+    }
+    .news-summary {
+      margin: 10px 0;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-right: 8px;
+    }
+    .market-event {
+      background-color: #3f51b5;
+      color: white;
+    }
+    .sector-event {
+      background-color: #ff9800;
+      color: white;
+    }
+    .company-event {
+      background-color: #4caf50;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="news-feed-container">
+    <div class="news-feed-header">
+      <h2>Market News Feed</h2>
+    </div>
+    <div class="news-feed-content">
+      <div class="news-item">
+        <h3 class="news-headline">
+          <span class="badge market-event">Market</span>
+          Federal Reserve Cuts Interest Rates
+        </h3>
+        <span class="news-date">May 13, 2025</span>
+        <p class="news-summary">The Federal Reserve announced a 0.25% cut in interest rates, citing economic concerns and inflation pressures.</p>
+      </div>
+      <div class="news-item">
+        <h3 class="news-headline">
+          <span class="badge sector-event">Sector</span>
+          Technology Stocks Rally on AI Advancements
+        </h3>
+        <span class="news-date">May 13, 2025</span>
+        <p class="news-summary">Technology sector stocks are rallying following announcements of major AI breakthroughs by several key companies.</p>
+      </div>
+      <div class="news-item">
+        <h3 class="news-headline">
+          <span class="badge company-event">Company</span>
+          Alphabet Inc. Reports Record Quarterly Earnings
+        </h3>
+        <span class="news-date">May 12, 2025</span>
+        <p class="news-summary">Alphabet has reported record earnings for the second quarter, with revenue up 25% year-over-year.</p>
+      </div>
+      <div class="news-item">
+        <h3 class="news-headline">
+          <span class="badge market-event">Market</span>
+          Global Markets React to Trade Agreement
+        </h3>
+        <span class="news-date">May 11, 2025</span>
+        <p class="news-summary">Global markets are responding positively to the new trade agreement between major economies, with most indices showing gains.</p>
+      </div>
+      <div class="news-item">
+        <h3 class="news-headline">
+          <span class="badge sector-event">Sector</span>
+          Energy Sector Faces Challenges Amid Policy Changes
+        </h3>
+        <span class="news-date">May 10, 2025</span>
+        <p class="news-summary">The energy sector is experiencing volatility as new environmental policies are implemented across multiple regions.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Script to inject this fallback content if the news feed isn't showing
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(function() {
+        // Check if the news feed is present in the dashboard
+        const newsTabContent = document.querySelector('.news-tab-content');
+        const newsFeed = document.querySelector('.news-feed-container');
+        
+        if (newsTabContent && !newsFeed) {
+          console.log('News feed not found, injecting fallback content');
+          // Clone this document's news feed
+          const fallbackContent = document.querySelector('.news-feed-container').cloneNode(true);
+          // Insert it into the news tab content
+          newsTabContent.appendChild(fallbackContent);
+        }
+      }, 2000); // Wait 2 seconds to check
+    });
+  </script>
+</body>
+</html>
