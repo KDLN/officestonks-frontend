@@ -155,6 +155,7 @@ export const updateStocksFromEvent = async (eventType, eventData, allStocks = nu
 
     // Track updated stocks
     const updatedStocks = [];
+    let stocksNeedUpdate = false;
 
     // Apply the impact based on event type
     if (eventType === 'market_event') {
@@ -175,6 +176,10 @@ export const updateStocksFromEvent = async (eventType, eventData, allStocks = nu
         
         // Update the price cache directly
         stockPriceCache[stock.id] = newPrice;
+        
+        // Flag the stock for local storage update
+        stock.current_price = newPrice;
+        stocksNeedUpdate = true;
         
         updatedStocks.push({
           id: stock.id,
@@ -211,6 +216,10 @@ export const updateStocksFromEvent = async (eventType, eventData, allStocks = nu
         // Update the price cache
         stockPriceCache[stock.id] = newPrice;
         
+        // Update the stock object for localStorage
+        stock.current_price = newPrice;
+        stocksNeedUpdate = true;
+        
         updatedStocks.push({
           id: stock.id,
           symbol: stock.symbol,
@@ -245,6 +254,10 @@ export const updateStocksFromEvent = async (eventType, eventData, allStocks = nu
           // Update the price cache
           stockPriceCache[stock.id] = newPrice;
           
+          // Update the stock object for localStorage
+          stock.current_price = newPrice;
+          stocksNeedUpdate = true;
+          
           updatedStocks.push({
             id: stock.id,
             symbol: stock.symbol,
@@ -271,6 +284,10 @@ export const updateStocksFromEvent = async (eventType, eventData, allStocks = nu
           // Update the price cache
           stockPriceCache[stock.id] = newPrice;
           
+          // Update the stock object for localStorage
+          stock.current_price = newPrice;
+          stocksNeedUpdate = true;
+          
           updatedStocks.push({
             id: stock.id,
             symbol: stock.symbol,
@@ -279,6 +296,26 @@ export const updateStocksFromEvent = async (eventType, eventData, allStocks = nu
             change_percentage: adjustedImpact * 100
           });
         });
+      }
+    }
+    
+    // If stocks were updated and we're using localStorage stocks, persist the updates
+    if (stocksNeedUpdate) {
+      // First check if these are from localStorage (mock stocks)
+      const mockStocksJson = localStorage.getItem('mockStocksData');
+      if (mockStocksJson) {
+        try {
+          // Parse the existing mock stocks to check if these are the same stocks
+          const mockStocksCheck = JSON.parse(mockStocksJson);
+          // If stock count matches, assume these are from localStorage
+          if (mockStocksCheck.length === stocks.length) {
+            // Save the updated stocks back to localStorage
+            localStorage.setItem('mockStocksData', JSON.stringify(stocks));
+            console.log(`Saved ${updatedStocks.length} stock price updates to localStorage`);
+          }
+        } catch (e) {
+          console.error('Error saving updated stock prices to localStorage:', e);
+        }
       }
     }
 

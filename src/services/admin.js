@@ -515,74 +515,134 @@ export const deleteUser = async (userId) => {
  * @returns {Promise<Array>} List of all stocks
  */
 export const adminGetAllStocks = async () => {
+  console.log('Getting admin stocks (always using mock data for now)');
+  
+  // Import the stockPriceCache to sync with it
+  let stockPriceCache;
   try {
-    // Try direct fetch to admin stocks endpoint
-    const result = await directAdminFetch('admin/stocks', {}, 
-      () => {
-        // Mock response - use basic stocks that we create
-        return [
-          { 
-            id: 1, 
-            symbol: "AAPL", 
-            name: "Apple Inc.", 
-            current_price: 175.34,
-            description: "Technology company that designs, manufactures, and markets smartphones, tablets, and computers.",
-            sector: "Technology",
-            volume: 25000000,
-            created_at: new Date().toISOString()
-          },
-          { 
-            id: 2, 
-            symbol: "MSFT", 
-            name: "Microsoft Corporation", 
-            current_price: 320.45,
-            description: "Technology company that develops and supports software and services.",
-            sector: "Technology",
-            volume: 18000000,
-            created_at: new Date().toISOString()
-          },
-          { 
-            id: 3, 
-            symbol: "AMZN", 
-            name: "Amazon.com, Inc.", 
-            current_price: 128.95,
-            description: "E-commerce and cloud computing company.",
-            sector: "Consumer Cyclical",
-            volume: 22000000,
-            created_at: new Date().toISOString()
-          },
-          { 
-            id: 4, 
-            symbol: "GOOGL", 
-            name: "Alphabet Inc.", 
-            current_price: 145.60,
-            description: "Technology company specializing in internet-related services and products.",
-            sector: "Communication Services",
-            volume: 15000000,
-            created_at: new Date().toISOString()
-          },
-          { 
-            id: 5, 
-            symbol: "FB", 
-            name: "Meta Platforms, Inc.", 
-            current_price: 302.75,
-            description: "Social media conglomerate corporation.",
-            sector: "Communication Services",
-            volume: 12000000,
-            created_at: new Date().toISOString()
-          }
-        ]
-      }
-    );
-    
-    console.log('Admin get all stocks result:', result);
-    return Array.isArray(result) ? result : [];
-  } catch (error) {
-    console.error('Error fetching stocks (admin):', error);
-    
-    // Return empty array as fallback
-    return [];
+    stockPriceCache = require('./websocket').stockPriceCache;
+    console.log('Successfully imported stockPriceCache from websocket.js');
+  } catch (e) {
+    console.warn('Could not import stockPriceCache, will continue without it:', e);
+    stockPriceCache = {};
   }
+  
+  // Store these stocks in localStorage for persistence
+  let mockStocks = localStorage.getItem('mockStocksData');
+  let stocks = [];
+  
+  // If we have saved mock stocks, use them
+  if (mockStocks) {
+    try {
+      stocks = JSON.parse(mockStocks);
+      console.log('Using saved mock stocks data:', stocks.length, 'stocks');
+    } catch (e) {
+      console.error('Error parsing saved stocks:', e);
+      // Continue to default mock data
+      stocks = [];
+    }
+  }
+  
+  // If no stocks in localStorage, use default stocks
+  if (!stocks || !Array.isArray(stocks) || stocks.length === 0) {
+    // Default mock stocks
+    stocks = [
+      { 
+        id: 1, 
+        symbol: "AAPL", 
+        name: "Apple Inc.", 
+        current_price: 175.34,
+        description: "Technology company that designs, manufactures, and markets smartphones, tablets, and computers.",
+        sector: "Technology",
+        volume: 25000000,
+        created_at: new Date().toISOString()
+      },
+      { 
+        id: 2, 
+        symbol: "MSFT", 
+        name: "Microsoft Corporation", 
+        current_price: 320.45,
+        description: "Technology company that develops and supports software and services.",
+        sector: "Technology",
+        volume: 18000000,
+        created_at: new Date().toISOString()
+      },
+      { 
+        id: 3, 
+        symbol: "AMZN", 
+        name: "Amazon.com, Inc.", 
+        current_price: 128.95,
+        description: "E-commerce and cloud computing company.",
+        sector: "Consumer Cyclical",
+        volume: 22000000,
+        created_at: new Date().toISOString()
+      },
+      { 
+        id: 4, 
+        symbol: "GOOGL", 
+        name: "Alphabet Inc.", 
+        current_price: 145.60,
+        description: "Technology company specializing in internet-related services and products.",
+        sector: "Communication Services",
+        volume: 15000000,
+        created_at: new Date().toISOString()
+      },
+      { 
+        id: 5, 
+        symbol: "FB", 
+        name: "Meta Platforms, Inc.", 
+        current_price: 302.75,
+        description: "Social media conglomerate corporation.",
+        sector: "Communication Services",
+        volume: 12000000,
+        created_at: new Date().toISOString()
+      }
+    ];
+    
+    // Save default mock data for persistence
+    localStorage.setItem('mockStocksData', JSON.stringify(stocks));
+    console.log('Using default mock stocks:', stocks.length, 'stocks');
+  }
+  
+  // Update stocks with the latest prices from stockPriceCache
+  if (stockPriceCache && Object.keys(stockPriceCache).length > 0) {
+    console.log('Updating stock prices from stockPriceCache');
+    let updatedPriceCount = 0;
+    
+    // Update prices from the stockPriceCache
+    stocks = stocks.map(stock => {
+      if (stock.id in stockPriceCache) {
+        updatedPriceCount++;
+        return {
+          ...stock,
+          current_price: stockPriceCache[stock.id],
+          // Add a flag to indicate the price was updated from cache
+          price_updated: true
+        };
+      }
+      return stock;
+    });
+    
+    if (updatedPriceCount > 0) {
+      console.log(`Updated ${updatedPriceCount} stock prices from cache`);
+      // Save the updated stocks back to localStorage
+      localStorage.setItem('mockStocksData', JSON.stringify(stocks));
+    }
+  } else {
+    console.log('No stockPriceCache available or it is empty');
+  }
+  
+  // For each stock, also update the stockPriceCache to ensure it's in sync
+  if (stockPriceCache) {
+    stocks.forEach(stock => {
+      if (!(stock.id in stockPriceCache)) {
+        stockPriceCache[stock.id] = stock.current_price;
+        console.log(`Added stock ${stock.symbol} (ID: ${stock.id}) to stockPriceCache`);
+      }
+    });
+  }
+  
+  return stocks;
 };
 
 /**
@@ -591,41 +651,52 @@ export const adminGetAllStocks = async () => {
  * @returns {Promise<Object>} Created stock
  */
 export const adminCreateStock = async (stockData) => {
+  console.log('Creating stock in mock mode:', stockData);
+  
   try {
-    // Mock function for creating a stock
-    const mockFunc = () => {
-      const mockData = getMockData();
-      const newStock = {
-        ...stockData,
-        id: Math.floor(Math.random() * 1000) + 100,
-        created_at: new Date().toISOString()
-      };
-      
-      // Store the mock stock in local storage if needed
-      // This part would be expanded if we implement full mock functionality
-      
-      return { 
-        ...newStock, 
-        message: 'Stock created successfully (mock mode)',
-        mockMode: true,
-        timestamp: new Date().toISOString()
-      };
+    // Get current mock stocks
+    let mockStocks = [];
+    const savedStocksJson = localStorage.getItem('mockStocksData');
+    
+    if (savedStocksJson) {
+      try {
+        mockStocks = JSON.parse(savedStocksJson);
+      } catch (e) {
+        console.error('Error parsing saved stocks during create:', e);
+      }
+    }
+    
+    // Generate a new unique ID (max existing ID + 1)
+    const maxId = mockStocks.reduce((max, stock) => Math.max(max, stock.id || 0), 0);
+    const newId = maxId + 1;
+    
+    // Create new stock with ID and timestamp
+    const newStock = {
+      ...stockData,
+      id: newId,
+      created_at: new Date().toISOString()
     };
     
-    // Try direct fetch to admin stock create endpoint
-    const result = await directAdminFetch('admin/stocks', {
-      method: 'POST',
-      body: JSON.stringify(stockData)
-    }, mockFunc);
+    // Add to mock stocks
+    mockStocks.push(newStock);
     
-    console.log('Create stock result:', result);
-    return result;
+    // Save updated stocks
+    localStorage.setItem('mockStocksData', JSON.stringify(mockStocks));
+    
+    console.log('Stock created successfully in mock mode:', newStock);
+    
+    return { 
+      ...newStock, 
+      message: 'Stock created successfully (mock mode)',
+      mockMode: true,
+      timestamp: new Date().toISOString()
+    };
   } catch (error) {
     console.error('Error creating stock:', error);
     return { 
       ...stockData, 
-      id: Math.floor(Math.random() * 1000) + 100,
-      message: 'Stock created successfully (mock mode)' 
+      message: 'Failed to create stock: ' + error.message,
+      error: true
     };
   }
 };
@@ -637,29 +708,58 @@ export const adminCreateStock = async (stockData) => {
  * @returns {Promise<Object>} Updated stock data
  */
 export const adminUpdateStock = async (stockId, stockData) => {
+  console.log('Updating stock in mock mode:', stockId, stockData);
+  
   try {
-    // Mock function to update stock
-    const mockFunc = () => {
-      return { 
-        ...stockData, 
-        id: stockId, 
-        message: 'Stock updated successfully (mock mode)',
-        mockMode: true,
-        timestamp: new Date().toISOString()
-      };
+    // Get current mock stocks
+    let mockStocks = [];
+    const savedStocksJson = localStorage.getItem('mockStocksData');
+    
+    if (savedStocksJson) {
+      try {
+        mockStocks = JSON.parse(savedStocksJson);
+      } catch (e) {
+        console.error('Error parsing saved stocks during update:', e);
+        return { error: true, message: 'Failed to update stock: could not read stock data' };
+      }
+    } else {
+      return { error: true, message: 'Failed to update stock: no stocks found' };
+    }
+    
+    // Find the stock to update
+    const stockIndex = mockStocks.findIndex(s => s.id === stockId);
+    
+    if (stockIndex === -1) {
+      return { error: true, message: `Failed to update stock: stock with ID ${stockId} not found` };
+    }
+    
+    // Update the stock
+    const updatedStock = {
+      ...mockStocks[stockIndex],
+      ...stockData,
+      id: stockId, // Ensure ID doesn't change
+      updated_at: new Date().toISOString()
     };
     
-    // Try direct fetch to admin stock update endpoint
-    const result = await directAdminFetch(`admin/stocks/${stockId}`, {
-      method: 'PUT',
-      body: JSON.stringify(stockData)
-    }, mockFunc);
+    mockStocks[stockIndex] = updatedStock;
     
-    console.log('Update stock result:', result);
-    return result;
+    // Save updated stocks
+    localStorage.setItem('mockStocksData', JSON.stringify(mockStocks));
+    
+    console.log('Stock updated successfully in mock mode:', updatedStock);
+    
+    return { 
+      ...updatedStock, 
+      message: 'Stock updated successfully (mock mode)',
+      mockMode: true,
+      timestamp: new Date().toISOString()
+    };
   } catch (error) {
     console.error('Error updating stock:', error);
-    return { ...stockData, id: stockId, message: 'Stock updated successfully (mock mode)' };
+    return { 
+      error: true,
+      message: 'Failed to update stock: ' + error.message 
+    };
   }
 };
 
@@ -669,27 +769,54 @@ export const adminUpdateStock = async (stockId, stockData) => {
  * @returns {Promise<Object>} Status of the operation
  */
 export const adminDeleteStock = async (stockId) => {
+  console.log('Deleting stock in mock mode:', stockId);
+  
   try {
-    // Mock function for stock deletion
-    const mockFunc = () => {
-      return { 
-        message: 'Stock deleted successfully (mock mode)',
-        deletedId: stockId,
-        mockMode: true,
-        timestamp: new Date().toISOString()
-      };
+    // Get current mock stocks
+    let mockStocks = [];
+    const savedStocksJson = localStorage.getItem('mockStocksData');
+    
+    if (savedStocksJson) {
+      try {
+        mockStocks = JSON.parse(savedStocksJson);
+      } catch (e) {
+        console.error('Error parsing saved stocks during delete:', e);
+        return { error: true, message: 'Failed to delete stock: could not read stock data' };
+      }
+    } else {
+      return { error: true, message: 'Failed to delete stock: no stocks found' };
+    }
+    
+    // Find the stock to delete
+    const stockIndex = mockStocks.findIndex(s => s.id === stockId);
+    
+    if (stockIndex === -1) {
+      return { error: true, message: `Failed to delete stock: stock with ID ${stockId} not found` };
+    }
+    
+    // Store info about deleted stock for response
+    const deletedStock = mockStocks[stockIndex];
+    
+    // Remove the stock from the array
+    mockStocks = mockStocks.filter(s => s.id !== stockId);
+    
+    // Save updated stocks
+    localStorage.setItem('mockStocksData', JSON.stringify(mockStocks));
+    
+    console.log('Stock deleted successfully in mock mode:', deletedStock.symbol);
+    
+    return { 
+      message: `Stock ${deletedStock.symbol} deleted successfully (mock mode)`,
+      deletedId: stockId,
+      mockMode: true,
+      timestamp: new Date().toISOString()
     };
-    
-    // Try direct fetch to admin stock delete endpoint
-    const result = await directAdminFetch(`admin/stocks/${stockId}`, {
-      method: 'DELETE'
-    }, mockFunc);
-    
-    console.log('Delete stock result:', result);
-    return result;
   } catch (error) {
     console.error('Error deleting stock:', error);
-    return { success: true, message: 'Stock deleted successfully (mock mode)' };
+    return { 
+      error: true,
+      message: 'Failed to delete stock: ' + error.message 
+    };
   }
 };
 

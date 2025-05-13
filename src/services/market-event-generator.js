@@ -1585,11 +1585,56 @@ export const startEventGenerator = (minFrequency = 10000, maxFrequency = 30000, 
     eventGeneratorInterval = setTimeout(generateAndDispatchEvent, randomDelay);
   };
   
+  // Function to refresh cached stocks from localStorage
+  const refreshCachedStocks = async () => {
+    console.log('Refreshing cached stocks from localStorage...');
+    
+    // Clear the cached stocks to force a reload
+    cachedStocks = null;
+    
+    // Generate an event to trigger reload of stocks
+    generateAndDispatchEvent();
+  };
+  
+  // Set up a listener for localStorage changes (for stock management)
+  // This is a workaround since there's no direct localStorage change event
+  const checkLocalStorageInterval = setInterval(() => {
+    const mockStocksJson = localStorage.getItem('mockStocksData');
+    if (mockStocksJson) {
+      try {
+        const mockStocks = JSON.parse(mockStocksJson);
+        // Check if the number of stocks has changed
+        if (cachedStocks && mockStocks.length !== cachedStocks.length) {
+          console.log('Stock count changed in localStorage, refreshing cache');
+          refreshCachedStocks();
+        } else if (cachedStocks && mockStocks.length > 0) {
+          // Check if any stock prices have changed
+          for (let i = 0; i < mockStocks.length; i++) {
+            const cachedStock = cachedStocks.find(s => s.id === mockStocks[i].id);
+            if (cachedStock && cachedStock.current_price !== mockStocks[i].current_price) {
+              console.log(`Stock price changed for ${mockStocks[i].symbol}, refreshing cache`);
+              refreshCachedStocks();
+              break;
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Error checking localStorage for stock changes:', e);
+      }
+    }
+  }, 10000); // Check every 10 seconds
+  
   // Generate one event immediately
   generateAndDispatchEvent();
   
   // Return function to stop the generator
-  return stopEventGenerator;
+  return () => {
+    stopEventGenerator();
+    // Also clear the localStorage check interval
+    if (checkLocalStorageInterval) {
+      clearInterval(checkLocalStorageInterval);
+    }
+  };
 };
 
 /**
@@ -1626,7 +1671,26 @@ const dispatchWebSocketEvent = async (event) => {
       // Lazy load stocks data if not already cached
       if (!cachedStocks) {
         console.log('Fetching stocks for the first time...');
-        cachedStocks = await getAllStocks();
+        // Try to get stocks from localStorage first (admin managed stocks)
+        const mockStocksJson = localStorage.getItem('mockStocksData');
+        if (mockStocksJson) {
+          try {
+            const mockStocks = JSON.parse(mockStocksJson);
+            if (Array.isArray(mockStocks) && mockStocks.length > 0) {
+              cachedStocks = mockStocks;
+              console.log(`Using ${cachedStocks.length} stocks from localStorage (admin managed stocks)`);
+            }
+          } catch (e) {
+            console.error('Error parsing mock stocks from localStorage:', e);
+          }
+        }
+        
+        // Fallback to API if no stocks found in localStorage
+        if (!cachedStocks || !Array.isArray(cachedStocks) || cachedStocks.length === 0) {
+          cachedStocks = await getAllStocks();
+          console.log(`Fetched ${cachedStocks.length} stocks from API`);
+        }
+        
         console.log(`Cached ${cachedStocks.length} stocks for future events`);
       }
       
