@@ -89,6 +89,32 @@ const NewsFeed = ({ stockId, sectorId }) => {
   const [filter, setFilter] = useState('all'); // 'all', 'market', 'sector', 'company'
   const [minImportance, setMinImportance] = useState(1); // 1-5 scale
   
+  // Add a reload button functionality
+  const reloadNews = async () => {
+    if (loading) return; // Prevent multiple simultaneous loads
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      console.log("NewsFeed: Manual reload initiated");
+      const response = await getRecentNews(20);
+      console.log("NewsFeed: Manual reload successful:", response);
+      if (response && (Array.isArray(response) || response.length > 0)) {
+        setNews(response);
+      } else {
+        setNews(sampleNewsItems);
+      }
+    } catch (err) {
+      console.error('Manual reload failed:', err);
+      setError('Manual reload failed: ' + (err.message || 'Unknown error'));
+      // Fall back to sample data
+      setNews(sampleNewsItems);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   // Load initial news data
   useEffect(() => {
     console.log("NewsFeed component mounted - Starting to load data");
@@ -327,6 +353,23 @@ const NewsFeed = ({ stockId, sectorId }) => {
         <div className="debug-info" style={{ fontSize: '12px', marginBottom: '10px', color: '#666' }}>
           <div>Status: {loading ? 'Loading...' : error ? 'Error' : 'Loaded'}</div>
           <div>Items: {filteredNews.length}</div>
+          {error && (
+            <button 
+              onClick={reloadNews}
+              style={{ 
+                marginTop: '5px', 
+                padding: '3px 8px', 
+                fontSize: '11px', 
+                background: '#1976d2', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '4px', 
+                cursor: 'pointer' 
+              }}
+            >
+              Retry Loading News
+            </button>
+          )}  
         </div>
         
         <div className="news-filters">

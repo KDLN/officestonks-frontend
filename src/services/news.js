@@ -10,11 +10,38 @@ export const getRecentNews = async (limit = 10, offset = 0) => {
   try {
     // Use the news endpoint through the API URL
     console.log(`Fetching news with URL: news?limit=${limit}&offset=${offset}`);
-    const response = await api.get(`news?limit=${limit}&offset=${offset}`);
-    console.log('News API response:', response);
-    return response.data || response;
+    
+    try {
+      const response = await api.get(`news?limit=${limit}&offset=${offset}`);
+      console.log('News API response:', response);
+      return response.data || response;
+    } catch (initialError) {
+      console.warn('Initial news fetch failed, trying direct endpoint:', initialError);
+      
+      // Try the direct endpoint as fallback
+      const proxyUrl = 'https://officestonks-proxy-production.up.railway.app';
+      console.log(`Trying direct news endpoint: ${proxyUrl}/api/news-direct?limit=${limit}&offset=${offset}`);
+      
+      const directResponse = await fetch(`${proxyUrl}/api/news-direct?limit=${limit}&offset=${offset}`, {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!directResponse.ok) {
+        throw new Error(`Direct endpoint failed: ${directResponse.status} ${directResponse.statusText}`);
+      }
+      
+      const data = await directResponse.json();
+      console.log('Direct news endpoint response:', data);
+      return data;
+    }
   } catch (error) {
-    console.error('Error fetching recent news:', error);
+    console.error('Error fetching recent news (all methods failed):', error);
     console.error('Request failed. Are you facing CORS issues? Check the browser console for more details.');
     throw error;
   }

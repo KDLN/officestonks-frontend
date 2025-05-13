@@ -5,7 +5,29 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Enable CORS for all requests with expanded configuration
+// IMPORTANT: Enable CORS for ALL routes and requests - no restrictions
+app.use((req, res, next) => {
+  // Get origin
+  const origin = req.headers.origin;
+  
+  // Always allow the origin
+  res.header('Access-Control-Allow-Origin', origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400');
+  
+  console.log(`CORS headers set for ${req.method} ${req.url} from origin: ${origin || 'unknown'}`);
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  
+  next();
+});
+
+// Backup CORS middleware - double protection
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps, curl, etc)
@@ -125,6 +147,44 @@ app.use('/ws', createProxyMiddleware({
     console.log(`WebSocket response status: ${proxyRes.statusCode}`);
   }
 }));
+
+// Special direct route for news endpoint - TEMPORARY FIX
+app.get('/api/news-direct', (req, res) => {
+  const limit = req.query.limit || 20;
+  const offset = req.query.offset || 0;
+  
+  // Add CORS headers explicitly
+  const origin = req.headers.origin;
+  res.header('Access-Control-Allow-Origin', origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  console.log(`Direct news request from origin: ${origin || 'unknown'}`);
+  
+  // Forward to backend news endpoint
+  fetch(`${backendUrl}/api/news?limit=${limit}&offset=${offset}`, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Origin': origin || 'https://officestonks-frontend-production.up.railway.app',
+      'Authorization': req.headers.authorization || ''
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log(`News data received, ${Array.isArray(data) ? data.length : 0} items`);
+    res.json(data);
+  })
+  .catch(error => {
+    console.error('Error fetching news:', error);
+    res.status(500).json({
+      error: 'Failed to fetch news',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  });
+});
 
 // Add a direct endpoint for accessing the backend health check endpoint
 app.get('/api/health-direct', (req, res) => {
