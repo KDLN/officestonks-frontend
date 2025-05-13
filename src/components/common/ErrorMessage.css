@@ -1,0 +1,95 @@
+.error-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  background-color: #fff3f3;
+  border-left: 4px solid #dc3545;
+}
+
+.error-info {
+  background-color: #e7f5ff;
+  border-left-color: #0d6efd;
+}
+
+.error-warning {
+  background-color: #fff8e6;
+  border-left-color: #ffc107;
+}
+
+.error-critical {
+  background-color: #ffe6e6;
+  border-left-color: #dc3545;
+}
+
+.error-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23dc3545'%3E%3Cpath d='M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-1.5a8.5 8.5 0 100-17 8.5 8.5 0 000 17zM11 7h2v7h-2V7zm0 8h2v2h-2v-2z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.error-info .error-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230d6efd'%3E%3Cpath d='M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-1.5a8.5 8.5 0 100-17 8.5 8.5 0 000 17zM11 7h2v2h-2V7zm0 4h2v6h-2v-6z'/%3E%3C/svg%3E");
+}
+
+.error-warning .error-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffc107'%3E%3Cpath d='M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-7v2h2v-2h-2zm0-8v6h2V7h-2z'/%3E%3C/svg%3E");
+}
+
+.error-content {
+  flex-grow: 1;
+}
+
+.error-message {
+  margin: 0 0 0.5rem 0;
+  color: #343a40;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.error-retry {
+  display: inline-block;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  border-radius: 0.25rem;
+  color: #fff;
+  background-color: #6c757d;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out;
+}
+
+.error-retry:hover {
+  background-color: #5a6268;
+}
+
+.error-info .error-retry {
+  background-color: #0d6efd;
+}
+
+.error-info .error-retry:hover {
+  background-color: #0b5ed7;
+}
+
+.error-warning .error-retry {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.error-warning .error-retry:hover {
+  background-color: #e0a800;
+}
+
+.error-critical .error-retry {
+  background-color: #dc3545;
+}
+
+.error-critical .error-retry:hover {
+  background-color: #bb2d3b;
+}

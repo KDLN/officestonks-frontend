@@ -1,0 +1,113 @@
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-color: #fff;
+  margin-bottom: 1rem;
+}
+
+.common-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.common-table th,
+.common-table td {
+  padding: 0.75rem 1rem;
+}
+
+.common-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #495057;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.common-table tr {
+  border-bottom: 1px solid #e9ecef;
+}
+
+.common-table tr:last-child {
+  border-bottom: none;
+}
+
+.common-table tbody tr:hover {
+  background-color: rgba(0, 123, 255, 0.05);
+}
+
+.common-table .empty-message {
+  text-align: center;
+  color: #6c757d;
+  padding: 2rem;
+}
+
+/* Status classes */
+.common-table .buy,
+.common-table .value-up,
+.common-table .price-up,
+.common-table .positive {
+  color: #28a745;
+}
+
+.common-table .sell,
+.common-table .value-down,
+.common-table .price-down,
+.common-table .negative {
+  color: #dc3545;
+}
+
+/* Animation for value changes */
+@keyframes highlight-green {
+  0% { background-color: rgba(40, 167, 69, 0.1); }
+  100% { background-color: transparent; }
+}
+
+@keyframes highlight-red {
+  0% { background-color: rgba(220, 53, 69, 0.1); }
+  100% { background-color: transparent; }
+}
+
+.common-table tr.value-up,
+.common-table tr.price-up {
+  animation: highlight-green 2s;
+}
+
+.common-table tr.value-down,
+.common-table tr.price-down {
+  animation: highlight-red 2s;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .common-table thead {
+    display: none;
+  }
+  
+  .common-table tbody tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+  }
+  
+  .common-table tbody td {
+    display: block;
+    text-align: right;
+    padding: 0.5rem;
+    border-bottom: 1px solid #e9ecef;
+  }
+  
+  .common-table tbody td:last-child {
+    border-bottom: none;
+  }
+  
+  .common-table tbody td:before {
+    content: attr(data-label);
+    float: left;
+    font-weight: 600;
+    color: #495057;
+  }
+}

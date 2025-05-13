@@ -1,0 +1,170 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+import Navigation from '../components/Navigation';
+import Chat from '../components/Chat';
+import Table from '../components/common/Table';
+import { LoadingWrapper } from '../components/common/Loading';
+import { ErrorWrapper } from '../components/common/ErrorMessage';
+import useStockData from '../hooks/useStockData';
+import './Dashboard.css';
+
+/**
+ * Dashboard page component
+ * Displays portfolio overview, top stocks, and recent transactions
+ */
+const Dashboard = () => {
+  const { portfolio, topStocks, transactions, loading, error, refresh } = useStockData();
+
+  // Table columns for portfolio
+  const portfolioColumns = [
+    { id: 'symbol', label: 'Symbol', render: item => item.stock?.symbol },
+    { id: 'shares', label: 'Shares', render: item => item.quantity },
+    { id: 'price', label: 'Price', render: item => `$${(item.stock?.current_price || 0).toFixed(2)}` },
+    { id: 'value', label: 'Value', render: item => `$${(item.quantity * (item.stock?.current_price || 0)).toFixed(2)}` },
+    { 
+      id: 'action', 
+      label: 'Action', 
+      render: item => (
+        <Link to={`/stock/${item.stock_id}`} className="trade-button">
+          Trade
+        </Link>
+      )
+    }
+  ];
+
+  // Table columns for top stocks
+  const stockColumns = [
+    { id: 'symbol', label: 'Symbol', render: stock => stock.symbol },
+    { id: 'name', label: 'Name', render: stock => stock.name },
+    { id: 'price', label: 'Price', render: stock => `$${(stock.current_price || 0).toFixed(2)}` },
+    {
+      id: 'action',
+      label: 'Action',
+      render: stock => (
+        <Link to={`/stock/${stock.id}`} className="trade-button">
+          Trade
+        </Link>
+      )
+    }
+  ];
+
+  // Table columns for transactions
+  const transactionColumns = [
+    { 
+      id: 'date', 
+      label: 'Date', 
+      render: transaction => new Date(transaction.created_at).toLocaleDateString() 
+    },
+    { id: 'stock', label: 'Stock', render: transaction => transaction.stock?.symbol },
+    {
+      id: 'type',
+      label: 'Type',
+      className: transaction => `transaction-type ${transaction.transaction_type}`,
+      render: transaction => transaction.transaction_type
+    },
+    { id: 'quantity', label: 'Quantity', render: transaction => transaction.quantity },
+    { id: 'price', label: 'Price', render: transaction => `$${(transaction.price || 0).toFixed(2)}` },
+    {
+      id: 'total',
+      label: 'Total',
+      render: transaction => `$${(transaction.quantity * (transaction.price || 0)).toFixed(2)}`
+    }
+  ];
+
+  // Row class name functions for highlighting price changes
+  const portfolioRowClass = item => item.valueChange ? `value-${item.valueChange}` : '';
+  const stockRowClass = stock => stock.priceChange ? `price-${stock.priceChange}` : '';
+
+  return (
+    <ErrorWrapper error={error}>
+      <LoadingWrapper loading={loading} message="Loading dashboard...">
+        <div className="dashboard-page">
+          <Navigation />
+          <div className="dashboard-container">
+            <div className="dashboard-header">
+              <h1>Dashboard</h1>
+              <div className="portfolio-value">
+                <h2>Total Portfolio Value</h2>
+                <div className="value">${(portfolio?.total_value || 0).toFixed(2)}</div>
+                <div className="portfolio-breakdown">
+                  <div className="breakdown-item">
+                    <span>Cash:</span>
+                    <span>${(portfolio?.cash_balance || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="breakdown-item">
+                    <span>Stocks:</span>
+                    <span>${(portfolio?.stock_value || 0).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="dashboard-content">
+              {/* Portfolio Section */}
+              <div className="dashboard-section">
+                <div className="section-header">
+                  <h2>Your Portfolio</h2>
+                  <Link to="/portfolio" className="view-all">View All</Link>
+                </div>
+                
+                {portfolio?.portfolio_items && portfolio.portfolio_items.length > 0 ? (
+                  <Table 
+                    columns={portfolioColumns}
+                    data={portfolio.portfolio_items.slice(0, 3)}
+                    rowClassName={portfolioRowClass}
+                    emptyMessage="You don't own any stocks yet."
+                    keyExtractor={item => item.stock_id}
+                    className="portfolio-table"
+                  />
+                ) : (
+                  <div className="empty-list">
+                    <p>You don't own any stocks yet.</p>
+                    <Link to="/stocks" className="action-button">Start Trading</Link>
+                  </div>
+                )}
+              </div>
+              
+              {/* Top Stocks Section */}
+              <div className="dashboard-section">
+                <div className="section-header">
+                  <h2>Top Stocks</h2>
+                  <Link to="/stocks" className="view-all">View All</Link>
+                </div>
+                
+                <Table 
+                  columns={stockColumns}
+                  data={topStocks}
+                  rowClassName={stockRowClass}
+                  emptyMessage="No stocks available"
+                  keyExtractor={stock => stock.id}
+                  className="stocks-table"
+                />
+              </div>
+              
+              {/* Recent Transactions Section */}
+              <div className="dashboard-section">
+                <div className="section-header">
+                  <h2>Recent Transactions</h2>
+                  <Link to="/transactions" className="view-all">View All</Link>
+                </div>
+                
+                <Table 
+                  columns={transactionColumns}
+                  data={transactions?.slice(0, 5)}
+                  emptyMessage="No recent transactions."
+                  keyExtractor={transaction => transaction.id}
+                  className="transactions-table"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Chat Component */}
+          <Chat />
+        </div>
+      </LoadingWrapper>
+    </ErrorWrapper>
+  );
+};
+
+export default Dashboard;

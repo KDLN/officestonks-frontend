@@ -1,0 +1,23 @@
+import React from 'react';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+
+/**
+ * Component to protect routes that require authentication
+ * 
+ * @param {Object} props Component props
+ * @param {React.ReactNode} props.element Element to render if authenticated
+ */
+const ProtectedRoute = ({ element }) => {
+  const { isAuthenticated } = useAuth();
+  
+  // Redirect to login page if not authenticated
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Render the protected component if authenticated
+  return element;
+};
+
+export default ProtectedRoute;
