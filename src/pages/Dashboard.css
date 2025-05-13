@@ -103,6 +103,10 @@
   padding: 0;
   border-radius: 8px;
   overflow: hidden;
+  background-color: transparent;
+  box-shadow: none;
+  max-width: 100%;
+  width: 100%;
 }
 
 .dashboard-section {

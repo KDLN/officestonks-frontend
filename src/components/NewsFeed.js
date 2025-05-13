@@ -292,25 +292,7 @@ const NewsFeed = ({ stockId, sectorId }) => {
   };
 
   return (
-    <div className="news-feed-container" style={{ border: '2px solid #1976d2', boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)' }}>
-      {/* Debugging header to confirm NewsFeed is rendering */}
-      <div style={{ background: '#e3f2fd', padding: '5px 10px', fontSize: '12px', color: '#555', display: 'flex', justifyContent: 'space-between' }}>
-        <span>NewsFeed component rendered successfully</span>
-        <button 
-          onClick={generateTestNewsItem}
-          style={{ 
-            padding: '2px 8px', 
-            background: '#1976d2', 
-            color: 'white', 
-            border: 'none', 
-            borderRadius: '4px',
-            fontSize: '10px',
-            cursor: 'pointer'
-          }}
-        >
-          Generate Test News
-        </button>
-      </div>
+    <div className="news-feed-container">
       <div className="news-feed-header">
         <h2>Market News Feed</h2>
         
@@ -321,6 +303,7 @@ const NewsFeed = ({ stockId, sectorId }) => {
               id="event-filter" 
               value={filter} 
               onChange={(e) => setFilter(e.target.value)}
+              style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid #ddd' }}
             >
               <option value="all">All Events</option>
               <option value="market">Market</option>
@@ -335,6 +318,7 @@ const NewsFeed = ({ stockId, sectorId }) => {
               id="importance-filter" 
               value={minImportance} 
               onChange={(e) => setMinImportance(parseInt(e.target.value))}
+              style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid #ddd' }}
             >
               <option value="1">All (1+)</option>
               <option value="2">Notable (2+)</option>
@@ -343,6 +327,24 @@ const NewsFeed = ({ stockId, sectorId }) => {
               <option value="5">Critical (5)</option>
             </select>
           </div>
+          
+          {/* Test button moved to filter area */}
+          <button 
+            onClick={generateTestNewsItem}
+            style={{ 
+              padding: '6px 12px',
+              background: '#1976d2', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '4px',
+              fontSize: '12px',
+              cursor: 'pointer',
+              marginLeft: 'auto',
+              fontWeight: 'bold'
+            }}
+          >
+            Generate Test News
+          </button>
         </div>
       </div>
       

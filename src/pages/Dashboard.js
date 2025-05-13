@@ -376,24 +376,25 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="dashboard-content news-tab-content" style={{ animation: 'fadeIn 0.5s ease' }}>
-            {/* News tab header and instructions */}
-            <div className="news-header-section" style={{
-              padding: '15px', 
-              background: 'linear-gradient(to right, #1976d2, #2196f3)',
-              color: 'white',
-              borderRadius: '8px 8px 0 0',
-              marginBottom: '10px',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-            }}>
-              <h2 style={{ margin: '0 0 10px 0' }}>Market News & Events</h2>
-              <p style={{ margin: '0', fontSize: '14px' }}>
-                Stay up-to-date with the latest market events, sector changes, and company news.
-                All updates appear in real-time via WebSocket connection.
-              </p>
+            {/* Unified styling for news section with NewsFeed component */}
+            <div className="dashboard-section" style={{ padding: 0, overflow: 'hidden' }}>
+              {/* News tab header and instructions */}
+              <div className="news-header-section" style={{
+                padding: '15px 20px', 
+                background: 'linear-gradient(to right, #1976d2, #2196f3)',
+                color: 'white',
+                borderBottom: '1px solid rgba(255,255,255,0.1)',
+              }}>
+                <h2 style={{ margin: '0 0 10px 0', fontSize: '1.4rem' }}>Market News & Events</h2>
+                <p style={{ margin: '0', fontSize: '14px', lineHeight: '1.5', opacity: '0.9' }}>
+                  Stay up-to-date with the latest market events, sector changes, and company news.
+                  All updates appear in real-time via WebSocket connection.
+                </p>
+              </div>
+              
+              {/* Render the NewsFeed component */}
+              <NewsFeed />
             </div>
-            
-            {/* Render the NewsFeed component */}
-            <NewsFeed />
           </div>
         )}
       </div>

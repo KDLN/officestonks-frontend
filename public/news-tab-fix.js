@@ -2,12 +2,42 @@
 document.addEventListener('DOMContentLoaded', function() {
   console.log('News tab fix script loaded');
   
-  // Pre-load the fallback content
-  const fallbackContent = document.createElement('iframe');
-  fallbackContent.style.display = 'none';
-  fallbackContent.src = 'news-feed-fallback.html';
-  fallbackContent.id = 'news-feed-fallback-frame';
-  document.body.appendChild(fallbackContent);
+  // Load a style fix for cleaner UI
+  const styleFixElement = document.createElement('style');
+  styleFixElement.textContent = `
+    /* Ensure news tab section has proper styling */
+    .news-tab-content .dashboard-section {
+      margin: 0 !important;
+      border-radius: 8px !important;
+      overflow: hidden !important;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    /* Fix news feed container styling */
+    .news-feed-container {
+      border-radius: 0 !important;
+      margin-bottom: 0 !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+    
+    /* Ensure news headers align properly */
+    .news-header-section h2, .news-feed-header h2 {
+      font-size: 1.4rem !important;
+      margin: 0 !important;
+      font-weight: 600 !important;
+    }
+    
+    /* Better badge styling */
+    .badge {
+      font-size: 0.65rem !important;
+      padding: 3px 8px !important;
+      border-radius: 4px !important;
+      display: inline-block !important;
+      margin-right: 8px !important;
+    }
+  `;
+  document.head.appendChild(styleFixElement);
   
   // Function to set the news tab active
   function setNewsTabActive() {
