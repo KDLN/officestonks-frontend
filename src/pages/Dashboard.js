@@ -21,8 +21,11 @@ const Dashboard = () => {
   const [topStocks, setTopStocks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  // Set default tab to 'news' to make the news tab visible by default
+  // IMPORTANT: News tab is set as default to ensure it's visible on load
   const [activeTab, setActiveTab] = useState('news'); // 'portfolio', 'news'
+  
+  // Log visible message on initial render to verify tab state
+  console.log('Dashboard initialized with active tab:', 'news');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -217,8 +220,28 @@ const Dashboard = () => {
           <button 
             className={`tab-button ${activeTab === 'news' ? 'active' : ''}`}
             onClick={() => setActiveTab('news')}
+            style={{ 
+              position: 'relative',
+              backgroundColor: activeTab === 'news' ? '#1976d2' : '',
+              color: activeTab === 'news' ? 'white' : '',
+              fontWeight: 'bold'
+            }}
           >
             Market News
+            {activeTab !== 'news' && (
+              <span style={{ 
+                position: 'absolute', 
+                top: '-8px', 
+                right: '-8px', 
+                background: '#ff5722', 
+                color: 'white', 
+                borderRadius: '50%', 
+                padding: '2px 6px', 
+                fontSize: '10px' 
+              }}>
+                New
+              </span>
+            )}
           </button>
         </div>
         
@@ -352,11 +375,24 @@ const Dashboard = () => {
             </div>
           </div>
         ) : (
-          <div className="dashboard-content news-tab-content">
-            {/* Add a debug message to verify NewsFeed is being included */}
-            <div style={{padding: '10px', background: '#f0f9ff', border: '1px solid #cce5ff', marginBottom: '10px', borderRadius: '4px'}}>
-              News Feed Component should appear below this message. If you don't see it, there might be an error.
+          <div className="dashboard-content news-tab-content" style={{ animation: 'fadeIn 0.5s ease' }}>
+            {/* News tab header and instructions */}
+            <div className="news-header-section" style={{
+              padding: '15px', 
+              background: 'linear-gradient(to right, #1976d2, #2196f3)',
+              color: 'white',
+              borderRadius: '8px 8px 0 0',
+              marginBottom: '10px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}>
+              <h2 style={{ margin: '0 0 10px 0' }}>Market News & Events</h2>
+              <p style={{ margin: '0', fontSize: '14px' }}>
+                Stay up-to-date with the latest market events, sector changes, and company news.
+                All updates appear in real-time via WebSocket connection.
+              </p>
             </div>
+            
+            {/* Render the NewsFeed component */}
             <NewsFeed />
           </div>
         )}

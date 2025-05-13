@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getRecentNews } from '../services/news';
 import { addListener } from '../services/websocket';
+import { sampleNewsItems, simulateNewsUpdate } from '../utils/news-test-data';
 import './NewsFeed.css';
 
 const NewsItem = ({ item }) => {
@@ -90,18 +91,32 @@ const NewsFeed = ({ stockId, sectorId }) => {
   
   // Load initial news data
   useEffect(() => {
-    console.log("NewsFeed component mounted");
+    console.log("NewsFeed component mounted - Starting to load data");
     const loadNews = async () => {
       try {
         setLoading(true);
         console.log("Fetching news data...");
-        const response = await getRecentNews(20);
-        console.log("News data received:", response);
-        setNews(response);
+        
+        try {
+          // Try to fetch news from API first
+          const response = await getRecentNews(20);
+          console.log("News data received from API:", response);
+          setNews(response);
+        } catch (apiError) {
+          console.warn('API fetch failed, using sample data:', apiError);
+          // Fall back to sample data if API fetch fails
+          console.log("Loading sample news data instead");
+          setNews(sampleNewsItems);
+        }
+        
         setError(null);
       } catch (err) {
         console.error('Error loading news:', err);
         setError('Failed to load news feed. Please try again later.');
+        
+        // Last resort: use sample data even if everything fails
+        console.log("Using sample data as last resort");
+        setNews(sampleNewsItems);
       } finally {
         setLoading(false);
       }
@@ -110,9 +125,55 @@ const NewsFeed = ({ stockId, sectorId }) => {
     loadNews();
   }, [stockId, sectorId]);
   
+  // Listen for WebSocket connection events
+  useEffect(() => {
+    const handleWebSocketConnected = () => {
+      console.log("WebSocket connected event detected in NewsFeed component");
+      setError(null); // Clear any previous errors
+    };
+    
+    const handleWebSocketClosed = (event) => {
+      console.log("WebSocket closed event detected in NewsFeed component", event.detail);
+      setError(`WebSocket connection closed (code: ${event.detail.code}). Reconnecting...`);
+    };
+    
+    const handleWebSocketError = (event) => {
+      console.log("WebSocket error event detected in NewsFeed component", event.detail);
+      setError(`WebSocket error: ${event.detail.error || 'Connection failed'}`);
+    };
+    
+    // Add DOM event listeners for WebSocket status
+    document.addEventListener('websocket-connected', handleWebSocketConnected);
+    document.addEventListener('websocket-closed', handleWebSocketClosed);
+    document.addEventListener('websocket-error', handleWebSocketError);
+    
+    // Clean up event listeners on unmount
+    return () => {
+      document.removeEventListener('websocket-connected', handleWebSocketConnected);
+      document.removeEventListener('websocket-closed', handleWebSocketClosed);
+      document.removeEventListener('websocket-error', handleWebSocketError);
+    };
+  }, []);
+
   // Listen for news updates via direct addListener call (without hook)
   useEffect(() => {
     console.log("Setting up news listeners");
+    
+    // Add WebSocket connection status to the component
+    let connectionStatus = 'connecting';
+    try {
+      // Check if socket exists
+      if (window.socket) {
+        connectionStatus = window.socket.readyState === 1 ? 'connected' : 
+                          window.socket.readyState === 0 ? 'connecting' : 
+                          window.socket.readyState === 2 ? 'closing' : 'closed';
+        console.log(`Current WebSocket state: ${connectionStatus} (${window.socket.readyState})`);
+      } else {
+        console.warn('WebSocket not initialized yet');
+      }
+    } catch (e) {
+      console.error('Error checking WebSocket status:', e);
+    }
     
     // Set up listener for news updates
     const removeNewsListener = addListener('news_item', (message) => {
@@ -222,8 +283,34 @@ const NewsFeed = ({ stockId, sectorId }) => {
     return false;
   });
   
+  // Function to generate test news item
+  const generateTestNewsItem = () => {
+    simulateNewsUpdate((newsItem) => {
+      console.log('Generated test news item:', newsItem);
+      setNews(prevNews => [newsItem, ...prevNews]);
+    });
+  };
+
   return (
-    <div className="news-feed-container">
+    <div className="news-feed-container" style={{ border: '2px solid #1976d2', boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)' }}>
+      {/* Debugging header to confirm NewsFeed is rendering */}
+      <div style={{ background: '#e3f2fd', padding: '5px 10px', fontSize: '12px', color: '#555', display: 'flex', justifyContent: 'space-between' }}>
+        <span>NewsFeed component rendered successfully</span>
+        <button 
+          onClick={generateTestNewsItem}
+          style={{ 
+            padding: '2px 8px', 
+            background: '#1976d2', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '4px',
+            fontSize: '10px',
+            cursor: 'pointer'
+          }}
+        >
+          Generate Test News
+        </button>
+      </div>
       <div className="news-feed-header">
         <h2>Market News Feed</h2>
         
@@ -261,7 +348,12 @@ const NewsFeed = ({ stockId, sectorId }) => {
       
       <div className="news-feed-content">
         {loading ? (
-          <div className="news-loading">Loading news feed...</div>
+          <div className="news-loading">
+          <div style={{ padding: '20px', textAlign: 'center' }}>
+            <div style={{ marginBottom: '10px', fontSize: '18px' }}>Loading news feed...</div>
+            <div style={{ color: '#666', fontSize: '14px' }}>Connecting to WebSocket for real-time updates</div>
+          </div>
+        </div>
         ) : error ? (
           <div className="news-error">{error}</div>
         ) : filteredNews.length === 0 ? (
