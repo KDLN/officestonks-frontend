@@ -76,7 +76,7 @@ export const initWebSocket = () => {
 
   // Check API health directly - this helps verify proxy connectivity
   console.log('Checking API health through proxy');
-  fetch(`${proxyUrl}/api/health`, {
+  fetch(`${proxyUrl}/health`, {
     method: 'GET',
     credentials: 'include',
     mode: 'cors',

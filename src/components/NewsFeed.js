@@ -95,27 +95,55 @@ const NewsFeed = ({ stockId, sectorId }) => {
     const loadNews = async () => {
       try {
         setLoading(true);
-        console.log("Fetching news data...");
+        console.log("NewsFeed: Fetching news data...");
+        
+        // Add API URL debugging
+        const { API_URL } = await import('../config/api');
+        console.log('Current API URL configuration:', API_URL);
         
         try {
           // Try to fetch news from API first
+          console.log("NewsFeed: Attempting API call to fetch news");
           const response = await getRecentNews(20);
-          console.log("News data received from API:", response);
-          setNews(response);
+          console.log("NewsFeed: Data received from API:", response);
+          
+          if (response && (Array.isArray(response) || response.length > 0)) {
+            console.log("NewsFeed: Setting news data from API response");
+            setNews(response);
+          } else {
+            console.warn("NewsFeed: API returned empty or invalid data, falling back to sample data");
+            setNews(sampleNewsItems);
+          }
         } catch (apiError) {
-          console.warn('API fetch failed, using sample data:', apiError);
+          console.warn('NewsFeed: API fetch failed, using sample data:', apiError);
+          
+          // Log detailed error information
+          console.error('Error details:', {
+            message: apiError.message,
+            stack: apiError.stack,
+            name: apiError.name
+          });
+          
+          // Display more informative error message
+          const errorMessage = apiError.message.includes('CORS') 
+            ? 'CORS policy error - Backend may not allow requests from this origin' 
+            : apiError.message.includes('NetworkError') 
+              ? 'Network error - Unable to connect to the API' 
+              : `API error: ${apiError.message}`;
+              
+          setError(`${errorMessage} - Using sample data instead`);
+          
           // Fall back to sample data if API fetch fails
-          console.log("Loading sample news data instead");
+          console.log("NewsFeed: Loading sample news data instead");
           setNews(sampleNewsItems);
         }
         
-        setError(null);
       } catch (err) {
-        console.error('Error loading news:', err);
+        console.error('NewsFeed: Error loading news:', err);
         setError('Failed to load news feed. Please try again later.');
         
         // Last resort: use sample data even if everything fails
-        console.log("Using sample data as last resort");
+        console.log("NewsFeed: Using sample data as last resort");
         setNews(sampleNewsItems);
       } finally {
         setLoading(false);
@@ -295,6 +323,11 @@ const NewsFeed = ({ stockId, sectorId }) => {
     <div className="news-feed-container">
       <div className="news-feed-header">
         <h2>Market News Feed</h2>
+        {/* Debug info section - API URL and Connection status */}
+        <div className="debug-info" style={{ fontSize: '12px', marginBottom: '10px', color: '#666' }}>
+          <div>Status: {loading ? 'Loading...' : error ? 'Error' : 'Loaded'}</div>
+          <div>Items: {filteredNews.length}</div>
+        </div>
         
         <div className="news-filters">
           <div className="filter-group">
@@ -357,7 +390,11 @@ const NewsFeed = ({ stockId, sectorId }) => {
           </div>
         </div>
         ) : error ? (
-          <div className="news-error">{error}</div>
+          <div className="news-error" style={{ padding: '15px', background: '#ffeeee', borderRadius: '4px', margin: '10px', color: '#d32f2f' }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>Error Loading News</div>
+            <div>{error}</div>
+            <div style={{ marginTop: '8px', fontSize: '12px' }}>Using sample data until connection is restored.</div>
+          </div>
         ) : filteredNews.length === 0 ? (
           <div className="news-empty">No news items match your current filters.</div>
         ) : (

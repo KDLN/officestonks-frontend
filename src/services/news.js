@@ -8,10 +8,14 @@ import { api } from '../config/api';
  */
 export const getRecentNews = async (limit = 10, offset = 0) => {
   try {
-    const response = await api.get(`/api/news?limit=${limit}&offset=${offset}`);
-    return response.data;
+    // Use the news endpoint through the API URL
+    console.log(`Fetching news with URL: news?limit=${limit}&offset=${offset}`);
+    const response = await api.get(`news?limit=${limit}&offset=${offset}`);
+    console.log('News API response:', response);
+    return response.data || response;
   } catch (error) {
     console.error('Error fetching recent news:', error);
+    console.error('Request failed. Are you facing CORS issues? Check the browser console for more details.');
     throw error;
   }
 };
@@ -25,7 +29,7 @@ export const getRecentNews = async (limit = 10, offset = 0) => {
  */
 export const getStockNews = async (stockId, limit = 10, offset = 0) => {
   try {
-    const response = await api.get(`/api/news/stock/${stockId}?limit=${limit}&offset=${offset}`);
+    const response = await api.get(`news/stock/${stockId}?limit=${limit}&offset=${offset}`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching news for stock ${stockId}:`, error);
@@ -42,7 +46,7 @@ export const getStockNews = async (stockId, limit = 10, offset = 0) => {
  */
 export const getSectorNews = async (sectorId, limit = 10, offset = 0) => {
   try {
-    const response = await api.get(`/api/news/sector/${sectorId}?limit=${limit}&offset=${offset}`);
+    const response = await api.get(`news/sector/${sectorId}?limit=${limit}&offset=${offset}`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching news for sector ${sectorId}:`, error);
@@ -57,7 +61,7 @@ export const getSectorNews = async (sectorId, limit = 10, offset = 0) => {
  */
 export const getNewsById = async (newsId) => {
   try {
-    const response = await api.get(`/api/news/${newsId}`);
+    const response = await api.get(`news/${newsId}`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching news item ${newsId}:`, error);
@@ -73,7 +77,7 @@ export const getNewsById = async (newsId) => {
  */
 export const getMarketEvents = async (limit = 10, offset = 0) => {
   try {
-    const response = await api.get(`/api/events/market?limit=${limit}&offset=${offset}`);
+    const response = await api.get(`events/market?limit=${limit}&offset=${offset}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching market events:', error);
@@ -91,8 +95,8 @@ export const getMarketEvents = async (limit = 10, offset = 0) => {
 export const getSectorEvents = async (sectorId = null, limit = 10, offset = 0) => {
   try {
     const url = sectorId 
-      ? `/api/events/sector/${sectorId}?limit=${limit}&offset=${offset}`
-      : `/api/events/sector?limit=${limit}&offset=${offset}`;
+      ? `events/sector/${sectorId}?limit=${limit}&offset=${offset}`
+      : `events/sector?limit=${limit}&offset=${offset}`;
     
     const response = await api.get(url);
     return response.data;
@@ -112,8 +116,8 @@ export const getSectorEvents = async (sectorId = null, limit = 10, offset = 0) =
 export const getCompanyEvents = async (stockId = null, limit = 10, offset = 0) => {
   try {
     const url = stockId 
-      ? `/api/events/company/${stockId}?limit=${limit}&offset=${offset}`
-      : `/api/events/company?limit=${limit}&offset=${offset}`;
+      ? `events/company/${stockId}?limit=${limit}&offset=${offset}`
+      : `events/company?limit=${limit}&offset=${offset}`;
     
     const response = await api.get(url);
     return response.data;
