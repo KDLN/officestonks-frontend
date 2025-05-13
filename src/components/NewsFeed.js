@@ -508,25 +508,7 @@ const NewsFeed = ({ stockId, sectorId }) => {
             </select>
           </div>
           
-          <div className="filter-group">
-            <label htmlFor="frequency-filter">Display Frequency:</label>
-            <select 
-              id="frequency-filter" 
-              value={newsFrequency} 
-              onChange={(e) => {
-                setNewsFrequency(e.target.value);
-                // Note: This only affects the local display of events, not server-wide impact
-                // We store the user's preference but don't actually change the global event generation
-                // This is important for security - only admins can change server-wide settings
-                console.log(`User changed news frequency preference to ${e.target.value} - this is display only`);
-              }}
-              style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid #ddd' }}
-            >
-              <option value="slow">Slow</option>
-              <option value="medium">Medium</option>
-              <option value="fast">Fast</option>
-            </select>
-          </div>
+          {/* Frequency controls moved to admin panel */}
         </div>
       </div>
       
