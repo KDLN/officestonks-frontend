@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getRecentNews } from '../services/news';
+import { getNewsViaProxy } from '../services/public-proxy';
 import { addListener } from '../services/websocket';
 import { sampleNewsItems, simulateNewsUpdate } from '../utils/news-test-data';
 import './NewsFeed.css';
@@ -129,9 +130,19 @@ const NewsFeed = ({ stockId, sectorId }) => {
         
         try {
           // Try to fetch news from API first
-          console.log("NewsFeed: Attempting API call to fetch news");
-          const response = await getRecentNews(20);
-          console.log("NewsFeed: Data received from API:", response);
+          console.log("NewsFeed: Attempting regular API call to fetch news");
+          let response;
+          
+          try {
+            // First try - Regular API
+            response = await getRecentNews(20);
+          } catch (regularError) {
+            // Second try - Public CORS proxy
+            console.log("NewsFeed: Regular API failed, trying public CORS proxy");
+            response = await getNewsViaProxy(20);
+          }
+          
+          console.log("NewsFeed: Data received:", response);
           
           if (response && (Array.isArray(response) || response.length > 0)) {
             console.log("NewsFeed: Setting news data from API response");

@@ -12,38 +12,40 @@ export const getRecentNews = async (limit = 10, offset = 0) => {
     console.log(`Fetching news with URL: news?limit=${limit}&offset=${offset}`);
     
     try {
+      // First try: Regular API call
       const response = await api.get(`news?limit=${limit}&offset=${offset}`);
       console.log('News API response:', response);
       return response.data || response;
     } catch (initialError) {
-      console.warn('Initial news fetch failed, trying direct endpoint:', initialError);
+      console.warn('Initial news fetch failed, trying public CORS proxy:', initialError);
       
-      // Try the direct endpoint as fallback
-      const proxyUrl = 'https://officestonks-proxy-production.up.railway.app';
-      console.log(`Trying direct news endpoint: ${proxyUrl}/api/news-direct?limit=${limit}&offset=${offset}`);
+      // Second try: Using a public CORS proxy
+      const targetUrl = 'https://officestonks-backend-production.up.railway.app/api/news';
+      const corsProxyUrl = 'https://corsproxy.io/?';
+      const encodedUrl = encodeURIComponent(`${targetUrl}?limit=${limit}&offset=${offset}`);
       
-      const directResponse = await fetch(`${proxyUrl}/api/news-direct?limit=${limit}&offset=${offset}`, {
+      console.log(`Trying CORS proxy: ${corsProxyUrl}${encodedUrl}`);
+      
+      const corsResponse = await fetch(`${corsProxyUrl}${encodedUrl}`, {
         method: 'GET',
         mode: 'cors',
-        credentials: 'include',
         headers: {
           'Accept': 'application/json',
-          'Content-Type': 'application/json'
         }
       });
       
-      if (!directResponse.ok) {
-        throw new Error(`Direct endpoint failed: ${directResponse.status} ${directResponse.statusText}`);
+      if (!corsResponse.ok) {
+        throw new Error(`CORS proxy failed: ${corsResponse.status} ${corsResponse.statusText}`);
       }
       
-      const data = await directResponse.json();
-      console.log('Direct news endpoint response:', data);
+      const data = await corsResponse.json();
+      console.log('CORS proxy response:', data);
       return data;
     }
   } catch (error) {
     console.error('Error fetching recent news (all methods failed):', error);
-    console.error('Request failed. Are you facing CORS issues? Check the browser console for more details.');
-    throw error;
+    console.error('Request failed, using sample data:', error.message);
+    return []; // Return empty array to trigger fallback to sample data
   }
 };
 
