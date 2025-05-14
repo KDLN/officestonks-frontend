@@ -8,7 +8,8 @@ import {
   adminUpdateStock, 
   adminDeleteStock, 
   resetStockPrices,
-  debugAdminToken 
+  debugAdminToken,
+  forceStockDataReset 
 } from '../services/admin';
 import {
   pauseStockUpdates,
@@ -355,8 +356,6 @@ const AdminStocks = () => {
       // Use the nuclear option to completely reset the WebSocket system
       console.log('Admin Stocks UI: Using nuclear option to force system reset');
       
-      // Use forceSystemReset from imports
-      
       // Execute the nuclear reset option
       console.log('Admin Stocks UI: Executing forceSystemReset()');
       const resetResult = await forceSystemReset();
@@ -408,6 +407,49 @@ const AdminStocks = () => {
       // Always make sure to resume WebSocket updates if there's an error
       console.log('Admin Stocks UI: Resuming WebSocket updates after error');
       resumeAllStockUpdates();
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Handle hard reset of all stock data
+  const handleHardReset = async () => {
+    if (!window.confirm('Are you sure you want to reset ALL stock data? This will remove custom stocks and recreate the default stock set.')) {
+      return;
+    }
+    
+    setLoading(true);
+    setMessage('');
+    setError('');
+    
+    try {
+      console.log('Admin Stocks UI: Performing hard reset of all stock data');
+      
+      // Call the force reset function
+      const result = await forceStockDataReset();
+      console.log('Admin Stocks UI: forceStockDataReset result:', result);
+      
+      if (result && result.error) {
+        setError(result.message || 'Failed to reset stock data');
+      } else {
+        setMessage('All stock data has been completely reset. Default stocks have been recreated.');
+        
+        // Refresh the stock list after a delay
+        setTimeout(async () => {
+          await fetchStocks();
+          
+          // Dispatch an event to notify components that stock data has been reset
+          document.dispatchEvent(new CustomEvent('admin-stocks-reset-complete', {
+            detail: {
+              timestamp: new Date().toISOString(),
+              hardReset: true
+            }
+          }));
+        }, 1000);
+      }
+    } catch (err) {
+      console.error('Admin Stocks UI: Hard reset error:', err);
+      setError(`Failed to reset stock data: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -584,6 +626,32 @@ const AdminStocks = () => {
               </span>
             ) : (
               'Reset All Prices'
+            )}
+          </button>
+          
+          <button 
+            className="admin-button danger"
+            onClick={handleHardReset}
+            disabled={loading}
+            style={{ 
+              flex: '1', 
+              minWidth: '150px', 
+              background: loading ? '#bdc3c7' : 'linear-gradient(to right, #e74c3c, #c0392b)',
+              color: 'white',
+              border: 'none',
+              padding: '12px 15px',
+              borderRadius: '4px',
+              fontWeight: 'bold',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+            }}
+          >
+            {loading ? (
+              <span>
+                <span style={{ display: 'inline-block', animation: 'rotation 1s infinite linear' }}>⟳</span> Processing...
+              </span>
+            ) : (
+              'Reset ALL Stock Data'
             )}
           </button>
         </div>

@@ -66,8 +66,11 @@ let allStockUpdatesPaused = false;
 // Cache invalidation timestamp - WebSocket messages older than this are ignored
 let cacheInvalidationTime = 0;
 
-// Cooldown period after reset in milliseconds (30 seconds)
-const RESET_COOLDOWN_PERIOD = 30000;
+// Cooldown period after reset in milliseconds (5 minutes)
+const RESET_COOLDOWN_PERIOD = 300000; // 5 minutes in milliseconds
+
+// Global flag to indicate if market event generation should be paused
+export let marketEventGenerationPaused = false;
 
 // Initialize WebSocket connection
 export const initWebSocket = () => {
@@ -612,12 +615,16 @@ export const forceSystemReset = async () => {
   // Step 2: Clear price cache
   clearStockPriceCache();
   
-  // Step 3: Set invalidation timestamp - any WebSocket messages older than this will be ignored
+  // Step 3: Pause market event generation entirely
+  marketEventGenerationPaused = true;
+  console.log('Market event generation paused');
+  
+  // Step 4: Set invalidation timestamp - any WebSocket messages older than this will be ignored
   cacheInvalidationTime = Date.now();
   console.log(`Cache invalidation timestamp set to: ${new Date(cacheInvalidationTime).toISOString()}`);
-  console.log(`Messages older than this will be ignored for ${RESET_COOLDOWN_PERIOD/1000} seconds`);
+  console.log(`Messages older than this will be ignored for ${RESET_COOLDOWN_PERIOD/1000} seconds (${Math.round(RESET_COOLDOWN_PERIOD/60000)} minutes)`);
   
-  // Step 4: Close and reopen WebSocket connection - this is drastic but effective
+  // Step 5: Close and reopen WebSocket connection - this is drastic but effective
   if (socket) {
     console.log('Closing WebSocket connection as part of system reset');
     socket.close();
@@ -626,28 +633,46 @@ export const forceSystemReset = async () => {
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
   
-  // Step 5: Reinitialize WebSocket connection
+  // Step 6: Reinitialize WebSocket connection
   console.log('Reinitializing WebSocket connection');
   initWebSocket();
   
-  // Step 6: Resume updates after a delay
+  // Step 7: Resume WebSocket updates after a short delay, but keep market event generation paused
   setTimeout(() => {
-    console.log('Resuming stock updates after system reset');
+    console.log('Resuming WebSocket updates after system reset');
     resumeAllStockUpdates();
     
     // Dispatch event
     document.dispatchEvent(new CustomEvent('system-reset-complete', {
       detail: {
         timestamp: new Date().toISOString(),
-        cacheInvalidationTime: cacheInvalidationTime
+        cacheInvalidationTime: cacheInvalidationTime,
+        cooldownPeriod: RESET_COOLDOWN_PERIOD,
+        cooldownEndsAt: new Date(cacheInvalidationTime + RESET_COOLDOWN_PERIOD).toISOString()
       }
     }));
+    
+    // Schedule resuming market event generation after the cooldown period ends
+    setTimeout(() => {
+      console.log('Resuming market event generation after cooldown period');
+      marketEventGenerationPaused = false;
+      
+      // Dispatch event that cooldown period is over
+      document.dispatchEvent(new CustomEvent('cooldown-period-ended', {
+        detail: {
+          timestamp: new Date().toISOString()
+        }
+      }));
+    }, RESET_COOLDOWN_PERIOD);
+    
   }, 5000); // 5 second delay
   
   return {
     success: true,
     message: 'System reset completed',
-    cacheInvalidationTime: cacheInvalidationTime
+    cacheInvalidationTime: cacheInvalidationTime,
+    cooldownPeriod: RESET_COOLDOWN_PERIOD,
+    cooldownEndsAt: new Date(cacheInvalidationTime + RESET_COOLDOWN_PERIOD).toISOString()
   };
 };
 

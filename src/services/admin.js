@@ -13,7 +13,8 @@ import {
   setStockPrice,
   pauseStockUpdates,
   resumeStockUpdates,
-  clearStockPriceCache
+  clearStockPriceCache,
+  forceSystemReset
 } from './websocket';
 
 // Use the CORS proxy URL for all admin requests
@@ -943,7 +944,7 @@ export const adminGetAllStocks = async () => {
   
   // If no stocks in localStorage, use default stocks
   if (!stocks || !Array.isArray(stocks) || stocks.length === 0) {
-    // Default mock stocks
+    // Default mock stocks (expanded list with 10 stocks)
     stocks = [
       { 
         id: 1, 
@@ -993,6 +994,56 @@ export const adminGetAllStocks = async () => {
         description: "Social media conglomerate corporation.",
         sector: "Communication Services",
         volume: 12000000,
+        created_at: new Date().toISOString()
+      },
+      { 
+        id: 6, 
+        symbol: "TSLA", 
+        name: "Tesla, Inc.", 
+        current_price: 245.30,
+        description: "Electric vehicle and clean energy company.",
+        sector: "Automotive",
+        volume: 30000000,
+        created_at: new Date().toISOString()
+      },
+      { 
+        id: 7, 
+        symbol: "NFLX", 
+        name: "Netflix, Inc.", 
+        current_price: 552.80,
+        description: "Streaming service and production company.",
+        sector: "Entertainment",
+        volume: 8500000,
+        created_at: new Date().toISOString()
+      },
+      { 
+        id: 8, 
+        symbol: "NVDA", 
+        name: "NVIDIA Corporation", 
+        current_price: 468.25,
+        description: "Technology company specializing in graphics processing units (GPUs).",
+        sector: "Technology",
+        volume: 16500000,
+        created_at: new Date().toISOString()
+      },
+      { 
+        id: 9, 
+        symbol: "DIS", 
+        name: "The Walt Disney Company", 
+        current_price: 105.45,
+        description: "Media and entertainment conglomerate.",
+        sector: "Entertainment",
+        volume: 10500000,
+        created_at: new Date().toISOString()
+      },
+      { 
+        id: 10, 
+        symbol: "JPM", 
+        name: "JPMorgan Chase & Co.", 
+        current_price: 175.15,
+        description: "Global financial services firm and banking institution.",
+        sector: "Financial",
+        volume: 9800000,
         created_at: new Date().toISOString()
       }
     ];
@@ -1219,3 +1270,50 @@ export const adminDeleteStock = async (stockId) => {
 };
 
 // Version 1.0.3 - Stock management added
+
+/**
+ * Force a complete reset of all stock data by clearing localStorage and recreating default stocks
+ * This is useful when you want to start fresh with a full set of default stocks
+ * @returns {Promise<Object>} Status of the operation
+ */
+export const forceStockDataReset = async () => {
+  try {
+    console.log('Performing a hard reset of all stock data');
+    
+    // First pause all WebSocket updates
+    pauseAllStockUpdates();
+    
+    // Clear the stock price cache
+    clearStockPriceCache();
+    
+    // Remove mockStocksData from localStorage to force recreation
+    localStorage.removeItem('mockStocksData');
+    console.log('Removed mockStocksData from localStorage');
+    
+    // Run forceSystemReset to pause market event generation
+    await forceSystemReset();
+    
+    // Fetch new default stocks - this will recreate them since we cleared localStorage
+    const stocks = await adminGetAllStocks();
+    console.log(`Recreated ${stocks.length} default stocks`);
+    
+    return {
+      success: true,
+      message: 'Successfully performed hard reset of all stock data',
+      stockCount: stocks.length,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('Error during hard reset of stock data:', error);
+    
+    // Make sure to resume updates on error
+    resumeAllStockUpdates();
+    
+    return {
+      success: false,
+      error: true,
+      message: `Error during hard reset: ${error.message}`,
+      timestamp: new Date().toISOString()
+    };
+  }
+};

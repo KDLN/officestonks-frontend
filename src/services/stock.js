@@ -6,7 +6,7 @@
 import { fetchWithAuth } from '../utils/http';
 import { ENDPOINTS } from '../config/api';
 import { fetchViaProxy } from './public-proxy';
-import { stockPriceCache } from './websocket';
+import { stockPriceCache, marketEventGenerationPaused } from './websocket';
 
 /**
  * Get all available stocks
@@ -130,6 +130,12 @@ export const getTransactionHistory = async (limit = 50, offset = 0) => {
  */
 export const updateStocksFromEvent = async (eventType, eventData, allStocks = null) => {
   try {
+    // Check if market event generation is paused
+    if (marketEventGenerationPaused) {
+      console.log('Market event generation is paused - skipping stock price updates');
+      return [];
+    }
+    
     // Get all stocks if not provided
     const stocks = allStocks || await getAllStocks();
     if (!stocks || !Array.isArray(stocks) || stocks.length === 0) {
