@@ -265,6 +265,9 @@ export const initWebSocket = () => {
     } catch (error) {
       console.error('Error sending ping message:', error);
     }
+    
+    // Start the automatic price monitoring to detect and fix abnormally low prices
+    startPriceMonitoring();
   });
   
   // Listen for messages
@@ -288,6 +291,78 @@ export const initWebSocket = () => {
       const now = Date.now();
       const isInCooldownPeriod = cacheInvalidationTime > 0 && 
                                (now - cacheInvalidationTime) < RESET_COOLDOWN_PERIOD;
+      
+      // SUPER EMERGENCY FIX: Block any price updates with $0.01 or similar tiny values
+      // This is a critical safeguard against bad data from the WebSocket server
+      if ((message.type === 'stock_update' || (message.id && message.current_price)) &&
+          (message.price <= 0.5 || message.current_price <= 0.5)) {
+        console.log(`🚨 EMERGENCY: Blocking suspiciously low price (${message.price || message.current_price}) for stock ${message.stock_id || message.id}`);
+        
+        // Get the stock ID for further action
+        const stockId = message.stock_id || message.id;
+        
+        // Block these ridiculous prices completely
+        if (stockId) {
+          // Check if we've seen too many low prices for this stock recently
+          const cacheKey = `lowPriceCount_${stockId}`;
+          const lowPriceCount = (parseInt(sessionStorage.getItem(cacheKey) || '0')) + 1;
+          sessionStorage.setItem(cacheKey, lowPriceCount.toString());
+          
+          console.log(`🔥 Low price counter for stock ${stockId}: ${lowPriceCount}`);
+          
+          // If we've seen 3+ low prices for this stock, force reset its price
+          if (lowPriceCount >= 3) {
+            // Attempt to get the default price from localStorage
+            try {
+              const mockStocksJson = localStorage.getItem('mockStocksData');
+              if (mockStocksJson) {
+                const stocks = JSON.parse(mockStocksJson);
+                const stock = stocks.find(s => s.id == stockId); // Use == for type coercion
+                
+                if (stock) {
+                  const defaultPrice = stock.symbol === 'AAPL' ? 175.34 :
+                                      stock.symbol === 'MSFT' ? 320.45 :
+                                      stock.symbol === 'AMZN' ? 128.95 :
+                                      stock.symbol === 'GOOGL' ? 145.60 :
+                                      stock.symbol === 'FB' ? 302.75 :
+                                      stock.symbol === 'TSLA' ? 245.30 :
+                                      stock.symbol === 'NFLX' ? 552.80 :
+                                      stock.symbol === 'NVDA' ? 468.25 :
+                                      stock.symbol === 'DIS' ? 105.45 :
+                                      stock.symbol === 'JPM' ? 175.15 :
+                                      100.00; // Default for custom stocks
+                  
+                  // Force reset the price in the cache
+                  stockPriceCache[stockId] = defaultPrice;
+                  
+                  console.log(`🔄 AUTO-RESET: Forced stock ${stockId} (${stock.symbol}) price back to default: $${defaultPrice}`);
+                  
+                  // Update the stock in localStorage
+                  stock.current_price = defaultPrice;
+                  localStorage.setItem('mockStocksData', JSON.stringify(stocks));
+                  
+                  // Reset the counter
+                  sessionStorage.removeItem(cacheKey);
+                  
+                  // Dispatch event to notify UI components
+                  document.dispatchEvent(new CustomEvent('stock-price-auto-reset', {
+                    detail: {
+                      stockId,
+                      symbol: stock.symbol,
+                      newPrice: defaultPrice,
+                      timestamp: new Date().toISOString()
+                    }
+                  }));
+                }
+              }
+            } catch (e) {
+              console.error('Error auto-resetting stock price:', e);
+            }
+          }
+        }
+        
+        return; // Block the original low price update completely
+      }
       
       // Completely ignore stock updates during cooldown period after reset
       if (isInCooldownPeriod && 
@@ -320,18 +395,71 @@ export const initWebSocket = () => {
               // CRITICAL FIX: Get current price and ensure we're not going below a reasonable value
               const currentPrice = stockPriceCache[stockId] || 100; // Default to 100 if no existing price
               
-              // CRITICAL PRICE DROP PROTECTION: Don't allow prices to drop by more than 10% in a single update
-              // This prevents the market event bug from causing prices to crash
-              const minimumAllowedPrice = currentPrice * 0.9; // 90% of current price
+              // AGGRESSIVE PRICE DROP PROTECTION: Enhanced to enforce both relative and absolute minimums
+              // 1. Don't allow prices to drop by more than 5% in a single update (was 10%)
+              // 2. Enforce an absolute minimum price floor of $5.00 (was $1.00)
+              const minimumAllowedPrice = currentPrice * 0.95; // 95% of current price - more restrictive
               
-              // Use the higher of: 1) minimum allowed price, 2) incoming price, 3) $1.00 absolute minimum
-              const safePrice = Math.max(minimumAllowedPrice, price, 1.00);
+              // Lookup typical price range for this stock to set a stock-specific floor
+              let stockFloor = 5.00; // Default absolute minimum price of $5.00 for all stocks
+              
+              // Try to get stock information from localStorage to set a stock-specific minimum
+              try {
+                const mockStocksJson = localStorage.getItem('mockStocksData');
+                if (mockStocksJson) {
+                  const stocks = JSON.parse(mockStocksJson);
+                  const stock = stocks.find(s => s.id == stockId); // Use == for type coercion
+                  
+                  if (stock) {
+                    // Set a minimum price floor at 25% of the stock's typical price
+                    // This prevents major stocks from going too low based on their expected range
+                    const defaultPrice = stock.symbol === 'AAPL' ? 175.34 :
+                                        stock.symbol === 'MSFT' ? 320.45 :
+                                        stock.symbol === 'AMZN' ? 128.95 :
+                                        stock.symbol === 'GOOGL' ? 145.60 :
+                                        stock.symbol === 'FB' ? 302.75 :
+                                        stock.symbol === 'TSLA' ? 245.30 :
+                                        stock.symbol === 'NFLX' ? 552.80 :
+                                        stock.symbol === 'NVDA' ? 468.25 :
+                                        stock.symbol === 'DIS' ? 105.45 :
+                                        stock.symbol === 'JPM' ? 175.15 :
+                                        100.00; // Default for custom stocks
+                                        
+                    stockFloor = Math.max(5.00, defaultPrice * 0.25); // Minimum 25% of default price
+                  }
+                }
+              } catch (e) {
+                console.error('Error determining stock floor price:', e);
+              }
+              
+              // Use the highest of: 
+              // 1) 95% of current price (minimumAllowedPrice)
+              // 2) incoming price
+              // 3) stock-specific minimum price (stockFloor)
+              const safePrice = Math.max(minimumAllowedPrice, price, stockFloor);
               
               // Store the safe price in cache
               stockPriceCache[stockId] = safePrice;
               
               if (safePrice !== price) {
-                console.log(`Protected stock ${stockId} from excessive price drop: ${price} -> ${safePrice}`);
+                console.log(`Protected stock ${stockId} from excessive price drop: ${price} -> ${safePrice} (floor: $${stockFloor.toFixed(2)})`);
+                
+                // Update the stock in localStorage to make the protection persistent
+                try {
+                  const mockStocksJson = localStorage.getItem('mockStocksData');
+                  if (mockStocksJson) {
+                    const stocks = JSON.parse(mockStocksJson);
+                    const stockIndex = stocks.findIndex(s => s.id == stockId);
+                    
+                    if (stockIndex !== -1) {
+                      stocks[stockIndex].current_price = safePrice;
+                      localStorage.setItem('mockStocksData', JSON.stringify(stocks));
+                      console.log(`Updated localStorage price for stock ${stockId} to match protected price: $${safePrice}`);
+                    }
+                  }
+                } catch (e) {
+                  console.error('Error updating localStorage with protected price:', e);
+                }
               } else {
                 console.log(`Updated stockPriceCache for stock ID: ${stockId}, new price: ${safePrice}`);
               }
@@ -502,6 +630,98 @@ const reconnect = () => {
 // Get latest price from cache or use default
 export const getLatestPrice = (stockId, defaultPrice) => {
   return stockId in stockPriceCache ? stockPriceCache[stockId] : defaultPrice;
+};
+
+/**
+ * Auto-reset a stock's price to its default value
+ * This is used in emergency situations when a stock price is detected to be too low
+ * @param {string|number} stockId - ID of the stock to reset
+ * @returns {Object} Result of the operation
+ */
+export const autoResetStockPrice = (stockId) => {
+  if (!stockId) {
+    console.error('Cannot auto-reset stock price: No stock ID provided');
+    return { success: false, error: 'No stock ID provided' };
+  }
+  
+  console.log(`🔄 AUTO-RESET: Attempting to reset stock ${stockId} price to default`);
+  
+  try {
+    // First pause WebSocket updates for this stock
+    pauseStockUpdates(stockId);
+    
+    // Try to find the stock in localStorage
+    const mockStocksJson = localStorage.getItem('mockStocksData');
+    if (!mockStocksJson) {
+      console.error('Cannot auto-reset: No mock stocks data found in localStorage');
+      return { success: false, error: 'No stock data found' };
+    }
+    
+    const stocks = JSON.parse(mockStocksJson);
+    const stock = stocks.find(s => s.id == stockId); // Use == for type coercion
+    
+    if (!stock) {
+      console.error(`Cannot auto-reset: Stock with ID ${stockId} not found`);
+      return { success: false, error: 'Stock not found' };
+    }
+    
+    // Determine default price based on stock symbol
+    const defaultPrice = 
+      stock.symbol === 'AAPL' ? 175.34 :
+      stock.symbol === 'MSFT' ? 320.45 :
+      stock.symbol === 'AMZN' ? 128.95 :
+      stock.symbol === 'GOOGL' ? 145.60 :
+      stock.symbol === 'FB' ? 302.75 :
+      stock.symbol === 'TSLA' ? 245.30 :
+      stock.symbol === 'NFLX' ? 552.80 :
+      stock.symbol === 'NVDA' ? 468.25 :
+      stock.symbol === 'DIS' ? 105.45 :
+      stock.symbol === 'JPM' ? 175.15 :
+      100.00; // Default for custom stocks
+    
+    // Update the stock price in cache
+    stockPriceCache[stockId] = defaultPrice;
+    
+    // Update the stock in localStorage
+    stock.current_price = defaultPrice;
+    localStorage.setItem('mockStocksData', JSON.stringify(stocks));
+    
+    console.log(`🔄 AUTO-RESET: Successfully reset stock ${stockId} (${stock.symbol}) price to ${defaultPrice}`);
+    
+    // Dispatch event to notify UI components
+    document.dispatchEvent(new CustomEvent('stock-price-auto-reset', {
+      detail: {
+        stockId,
+        symbol: stock.symbol,
+        newPrice: defaultPrice,
+        timestamp: new Date().toISOString()
+      }
+    }));
+    
+    // Resume WebSocket updates after a delay
+    setTimeout(() => {
+      console.log(`Resuming WebSocket updates for stock ${stockId} after auto-reset`);
+      resumeStockUpdates(stockId);
+    }, 3000);
+    
+    return { 
+      success: true, 
+      stockId,
+      symbol: stock.symbol,
+      oldPrice: stock.current_price,
+      newPrice: defaultPrice,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('Error during auto-reset of stock price:', error);
+    
+    // Make sure to resume stock updates even if there was an error
+    setTimeout(() => {
+      resumeStockUpdates(stockId);
+    }, 1000);
+    
+    return { success: false, error: error.message };
+  }
 };
 
 /**
@@ -693,6 +913,139 @@ export const forceSystemReset = async () => {
 };
 
 // React hook for WebSocket integration
+// PRICE MONITORING SYSTEM
+// This system periodically checks for abnormally low stock prices and auto-resets them
+let priceMonitoringInterval = null;
+
+/**
+ * Start monitoring stock prices for abnormally low values
+ * This function will check all stock prices every 30 seconds and reset any that are too low
+ */
+const startPriceMonitoring = () => {
+  // Clear any existing interval
+  if (priceMonitoringInterval) {
+    clearInterval(priceMonitoringInterval);
+  }
+  
+  console.log('🛡️ Starting automatic price monitoring system');
+  
+  // Set up the monitoring interval (every 30 seconds)
+  priceMonitoringInterval = setInterval(() => {
+    // Skip monitoring if we're in a cooldown period
+    if ((Date.now() - cacheInvalidationTime) < RESET_COOLDOWN_PERIOD) {
+      console.log('Price monitoring: Skipping check during cooldown period');
+      return;
+    }
+    
+    // Skip if all updates are paused
+    if (allStockUpdatesPaused) {
+      console.log('Price monitoring: Skipping check while all updates are paused');
+      return;
+    }
+    
+    console.log('🔍 Price monitoring: Checking for abnormally low stock prices');
+    
+    try {
+      // Get all stocks from localStorage
+      const mockStocksJson = localStorage.getItem('mockStocksData');
+      if (!mockStocksJson) {
+        console.log('Price monitoring: No mock stocks data found');
+        return;
+      }
+      
+      const stocks = JSON.parse(mockStocksJson);
+      let resetCount = 0;
+      
+      // Check each stock price
+      stocks.forEach(stock => {
+        if (!stock || !stock.id) return;
+        
+        // Get the current price from the cache
+        const stockId = stock.id;
+        const cachedPrice = stockPriceCache[stockId];
+        
+        // If no cached price, skip
+        if (!cachedPrice) return;
+        
+        // Determine the minimum allowed price for this stock
+        const symbol = stock.symbol;
+        const defaultPrice = 
+          symbol === 'AAPL' ? 175.34 :
+          symbol === 'MSFT' ? 320.45 :
+          symbol === 'AMZN' ? 128.95 :
+          symbol === 'GOOGL' ? 145.60 :
+          symbol === 'FB' ? 302.75 :
+          symbol === 'TSLA' ? 245.30 :
+          symbol === 'NFLX' ? 552.80 :
+          symbol === 'NVDA' ? 468.25 :
+          symbol === 'DIS' ? 105.45 :
+          symbol === 'JPM' ? 175.15 :
+          100.00; // Default for custom stocks
+        
+        // Floor is 25% of default price or $5.00, whichever is higher
+        const stockFloor = Math.max(5.00, defaultPrice * 0.25);
+        
+        // Check if price is too low (below floor or suspiciously low like $0.01)
+        if (cachedPrice < stockFloor || cachedPrice <= 1.00) {
+          console.log(`🚨 DETECTED abnormally low price for ${symbol} (ID: ${stockId}): $${cachedPrice.toFixed(2)}`);
+          
+          // Auto-reset this stock's price
+          autoResetStockPrice(stockId);
+          resetCount++;
+        }
+      });
+      
+      if (resetCount > 0) {
+        console.log(`🛠️ Price monitoring: Auto-reset ${resetCount} stocks with abnormally low prices`);
+      } else {
+        console.log('✅ Price monitoring: All stock prices are within normal ranges');
+      }
+    } catch (error) {
+      console.error('Error during price monitoring check:', error);
+    }
+  }, 30000); // Check every 30 seconds
+  
+  // Also do an immediate check
+  setTimeout(() => {
+    console.log('🔍 Price monitoring: Running initial check');
+    try {
+      // Get all stocks from localStorage
+      const mockStocksJson = localStorage.getItem('mockStocksData');
+      if (!mockStocksJson) return;
+      
+      const stocks = JSON.parse(mockStocksJson);
+      let resetCount = 0;
+      
+      // Check each stock price
+      stocks.forEach(stock => {
+        if (!stock || !stock.id) return;
+        
+        // Get the current price from the cache
+        const stockId = stock.id;
+        const cachedPrice = stockPriceCache[stockId];
+        
+        // If no cached price, skip
+        if (!cachedPrice) return;
+        
+        // Check if price is suspiciously low (below $1.00)
+        if (cachedPrice <= 1.00) {
+          console.log(`🚨 DETECTED suspiciously low price for ${stock.symbol} (ID: ${stockId}): $${cachedPrice.toFixed(2)}`);
+          
+          // Auto-reset this stock's price
+          autoResetStockPrice(stockId);
+          resetCount++;
+        }
+      });
+      
+      if (resetCount > 0) {
+        console.log(`🛠️ Initial price check: Auto-reset ${resetCount} stocks with suspiciously low prices`);
+      }
+    } catch (error) {
+      console.error('Error during initial price check:', error);
+    }
+  }, 5000); // Run initial check after 5 seconds
+}
+
 export const useWebSocket = () => {
   // Initialize WebSocket connection on component mount
   useEffect(() => {
@@ -724,6 +1077,7 @@ export const useWebSocket = () => {
     setStockPrice,
     clearStockPriceCache,
     forceSystemReset,
+    autoResetStockPrice,
     isPaused: (stockId) => pausedStocks.has(stockId) || allStockUpdatesPaused,
     isAllPaused: () => allStockUpdatesPaused,
     isInCooldown: () => (Date.now() - cacheInvalidationTime) < RESET_COOLDOWN_PERIOD

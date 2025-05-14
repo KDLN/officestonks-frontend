@@ -181,20 +181,71 @@ export const updateStocksFromEvent = async (eventType, eventData, allStocks = nu
         let priceChange;
         let newPrice;
         
+        // IMPROVED PRICE CALCULATION LOGIC:
+        // 1. Limit negative percentage changes to prevent catastrophic drops
+        // 2. Use a higher minimum price floor
+        
         // If impact is very small (like 0.01 to 0.05), it's probably a percentage
-        // Otherwise, it's an absolute dollar change
         if (Math.abs(adjustedImpact) < 0.1) {
-          // It's a percentage, so multiply price by (1 + impact)
-          // This ensures prices can't go negative from percentage changes
+          // It's a percentage, but we need to limit negative percentages
+          
+          // For negative impacts, don't allow more than 5% drop in a single event
+          if (adjustedImpact < 0) {
+            adjustedImpact = Math.max(adjustedImpact, -0.05);
+            console.log(`⚠️ Limited negative percentage impact to -5%: ${adjustedImpact}`);
+          }
+          
+          // Apply the percentage change
           newPrice = currentPrice * (1 + adjustedImpact);
         } else {
-          // It's an absolute change
+          // It's an absolute change - limit negative changes relative to stock price
+          if (adjustedImpact < 0) {
+            // Don't allow absolute drops greater than 5% of current price
+            const maxAbsoluteDrop = currentPrice * 0.05;
+            if (Math.abs(adjustedImpact) > maxAbsoluteDrop) {
+              adjustedImpact = -maxAbsoluteDrop;
+              console.log(`⚠️ Limited negative absolute impact to -$${maxAbsoluteDrop.toFixed(2)}`);
+            }
+          }
+          
           priceChange = adjustedImpact; // Direct dollar amount
           newPrice = currentPrice + priceChange;
         }
         
-        // Enforce minimum price of $1.00 (not $0.01)
-        newPrice = Math.max(1.00, newPrice);
+        // Enhanced price floor - use a higher minimum of $5.00 (was $1.00)
+        // Plus a stock-specific floor based on typical price range
+        let stockFloor = 5.00; // Default absolute minimum of $5.00 for all stocks
+        
+        try {
+          // Lookup the stock's symbol to determine typical price range
+          const symbol = stock.symbol;
+          if (symbol) {
+            // Set a stock-specific floor based on typical price
+            const defaultPrice = 
+              symbol === 'AAPL' ? 175.34 :
+              symbol === 'MSFT' ? 320.45 :
+              symbol === 'AMZN' ? 128.95 :
+              symbol === 'GOOGL' ? 145.60 :
+              symbol === 'FB' ? 302.75 :
+              symbol === 'TSLA' ? 245.30 :
+              symbol === 'NFLX' ? 552.80 :
+              symbol === 'NVDA' ? 468.25 :
+              symbol === 'DIS' ? 105.45 :
+              symbol === 'JPM' ? 175.15 :
+              100.00; // Default for custom stocks
+            
+            // Floor is 25% of default price or $5.00, whichever is higher
+            stockFloor = Math.max(5.00, defaultPrice * 0.25);
+          }
+        } catch (e) {
+          console.error('Error determining stock floor price in market event:', e);
+        }
+        
+        // Apply the floor to ensure price doesn't drop too low
+        if (newPrice < stockFloor) {
+          console.log(`📈 Floor protection: ${stock.symbol || 'Stock'} price ${newPrice.toFixed(2)} below floor ${stockFloor.toFixed(2)}`);
+          newPrice = stockFloor;
+        }
         
         // Update the price cache directly
         stockPriceCache[stock.id] = newPrice;
@@ -235,20 +286,71 @@ export const updateStocksFromEvent = async (eventType, eventData, allStocks = nu
         let priceChange;
         let newPrice;
         
+        // IMPROVED PRICE CALCULATION LOGIC:
+        // 1. Limit negative percentage changes to prevent catastrophic drops
+        // 2. Use a higher minimum price floor
+        
         // If impact is very small (like 0.01 to 0.05), it's probably a percentage
-        // Otherwise, it's an absolute dollar change
         if (Math.abs(adjustedImpact) < 0.1) {
-          // It's a percentage, so multiply price by (1 + impact)
-          // This ensures prices can't go negative from percentage changes
+          // It's a percentage, but we need to limit negative percentages
+          
+          // For negative impacts, don't allow more than 5% drop in a single event
+          if (adjustedImpact < 0) {
+            adjustedImpact = Math.max(adjustedImpact, -0.05);
+            console.log(`⚠️ Limited negative percentage impact to -5% (sector event): ${adjustedImpact}`);
+          }
+          
+          // Apply the percentage change
           newPrice = currentPrice * (1 + adjustedImpact);
         } else {
-          // It's an absolute change
+          // It's an absolute change - limit negative changes relative to stock price
+          if (adjustedImpact < 0) {
+            // Don't allow absolute drops greater than 5% of current price
+            const maxAbsoluteDrop = currentPrice * 0.05;
+            if (Math.abs(adjustedImpact) > maxAbsoluteDrop) {
+              adjustedImpact = -maxAbsoluteDrop;
+              console.log(`⚠️ Limited negative absolute impact to -$${maxAbsoluteDrop.toFixed(2)} (sector event)`);
+            }
+          }
+          
           priceChange = adjustedImpact; // Direct dollar amount
           newPrice = currentPrice + priceChange;
         }
         
-        // Enforce minimum price of $1.00 (not $0.01)
-        newPrice = Math.max(1.00, newPrice);
+        // Enhanced price floor - use a higher minimum of $5.00 (was $1.00)
+        // Plus a stock-specific floor based on typical price range
+        let stockFloor = 5.00; // Default absolute minimum of $5.00 for all stocks
+        
+        try {
+          // Lookup the stock's symbol to determine typical price range
+          const symbol = stock.symbol;
+          if (symbol) {
+            // Set a stock-specific floor based on typical price
+            const defaultPrice = 
+              symbol === 'AAPL' ? 175.34 :
+              symbol === 'MSFT' ? 320.45 :
+              symbol === 'AMZN' ? 128.95 :
+              symbol === 'GOOGL' ? 145.60 :
+              symbol === 'FB' ? 302.75 :
+              symbol === 'TSLA' ? 245.30 :
+              symbol === 'NFLX' ? 552.80 :
+              symbol === 'NVDA' ? 468.25 :
+              symbol === 'DIS' ? 105.45 :
+              symbol === 'JPM' ? 175.15 :
+              100.00; // Default for custom stocks
+            
+            // Floor is 25% of default price or $5.00, whichever is higher
+            stockFloor = Math.max(5.00, defaultPrice * 0.25);
+          }
+        } catch (e) {
+          console.error('Error determining stock floor price in sector event:', e);
+        }
+        
+        // Apply the floor to ensure price doesn't drop too low
+        if (newPrice < stockFloor) {
+          console.log(`📈 Floor protection: ${stock.symbol || 'Stock'} price ${newPrice.toFixed(2)} below floor ${stockFloor.toFixed(2)}`);
+          newPrice = stockFloor;
+        }
         
         // Update the price cache
         stockPriceCache[stock.id] = newPrice;
@@ -288,18 +390,71 @@ export const updateStocksFromEvent = async (eventType, eventData, allStocks = nu
           let priceChange;
           let newPrice;
           
+          // IMPROVED PRICE CALCULATION LOGIC:
+          // 1. Limit negative percentage changes to prevent catastrophic drops
+          // 2. Use a higher minimum price floor
+          
           // If impact is very small, it's probably a percentage
           if (Math.abs(adjustedImpact) < 0.1) {
-            // It's a percentage, so multiply price by (1 + impact)
+            // It's a percentage, but we need to limit negative percentages
+            
+            // For negative impacts, don't allow more than 5% drop in a single event
+            if (adjustedImpact < 0) {
+              adjustedImpact = Math.max(adjustedImpact, -0.05);
+              console.log(`⚠️ Limited negative percentage impact to -5% (company event): ${adjustedImpact}`);
+            }
+            
+            // Apply the percentage change
             newPrice = currentPrice * (1 + adjustedImpact);
           } else {
-            // It's an absolute change
-            priceChange = adjustedImpact;
+            // It's an absolute change - limit negative changes relative to stock price
+            if (adjustedImpact < 0) {
+              // Don't allow absolute drops greater than 5% of current price
+              const maxAbsoluteDrop = currentPrice * 0.05;
+              if (Math.abs(adjustedImpact) > maxAbsoluteDrop) {
+                adjustedImpact = -maxAbsoluteDrop;
+                console.log(`⚠️ Limited negative absolute impact to -$${maxAbsoluteDrop.toFixed(2)} (company event)`);
+              }
+            }
+            
+            priceChange = adjustedImpact; // Direct dollar amount
             newPrice = currentPrice + priceChange;
           }
           
-          // Enforce minimum price of $1.00 (not $0.01)
-          newPrice = Math.max(1.00, newPrice);
+          // Enhanced price floor - use a higher minimum of $5.00 (was $1.00)
+          // Plus a stock-specific floor based on typical price range
+          let stockFloor = 5.00; // Default absolute minimum of $5.00 for all stocks
+          
+          try {
+            // Lookup the stock's symbol to determine typical price range
+            const symbol = stock.symbol;
+            if (symbol) {
+              // Set a stock-specific floor based on typical price
+              const defaultPrice = 
+                symbol === 'AAPL' ? 175.34 :
+                symbol === 'MSFT' ? 320.45 :
+                symbol === 'AMZN' ? 128.95 :
+                symbol === 'GOOGL' ? 145.60 :
+                symbol === 'FB' ? 302.75 :
+                symbol === 'TSLA' ? 245.30 :
+                symbol === 'NFLX' ? 552.80 :
+                symbol === 'NVDA' ? 468.25 :
+                symbol === 'DIS' ? 105.45 :
+                symbol === 'JPM' ? 175.15 :
+                100.00; // Default for custom stocks
+              
+              // Floor is 25% of default price or $5.00, whichever is higher
+              stockFloor = Math.max(5.00, defaultPrice * 0.25);
+            }
+          } catch (e) {
+            console.error('Error determining stock floor price in company event:', e);
+          }
+          
+          // Apply the floor to ensure price doesn't drop too low
+          if (newPrice < stockFloor) {
+            console.log(`📈 Floor protection: ${stock.symbol || 'Stock'} price ${newPrice.toFixed(2)} below floor ${stockFloor.toFixed(2)}`);
+            newPrice = stockFloor;
+          }
           
           // Update the price cache
           stockPriceCache[stock.id] = newPrice;
@@ -331,18 +486,71 @@ export const updateStocksFromEvent = async (eventType, eventData, allStocks = nu
           let priceChange;
           let newPrice;
           
+          // IMPROVED PRICE CALCULATION LOGIC:
+          // 1. Limit negative percentage changes to prevent catastrophic drops
+          // 2. Use a higher minimum price floor
+          
           // If impact is very small, it's probably a percentage
           if (Math.abs(adjustedImpact) < 0.1) {
-            // It's a percentage, so multiply price by (1 + impact)
+            // It's a percentage, but we need to limit negative percentages
+            
+            // For negative impacts, don't allow more than 5% drop in a single event
+            if (adjustedImpact < 0) {
+              adjustedImpact = Math.max(adjustedImpact, -0.05);
+              console.log(`⚠️ Limited negative percentage impact to -5% (company event): ${adjustedImpact}`);
+            }
+            
+            // Apply the percentage change
             newPrice = currentPrice * (1 + adjustedImpact);
           } else {
-            // It's an absolute change
-            priceChange = adjustedImpact;
+            // It's an absolute change - limit negative changes relative to stock price
+            if (adjustedImpact < 0) {
+              // Don't allow absolute drops greater than 5% of current price
+              const maxAbsoluteDrop = currentPrice * 0.05;
+              if (Math.abs(adjustedImpact) > maxAbsoluteDrop) {
+                adjustedImpact = -maxAbsoluteDrop;
+                console.log(`⚠️ Limited negative absolute impact to -$${maxAbsoluteDrop.toFixed(2)} (company event)`);
+              }
+            }
+            
+            priceChange = adjustedImpact; // Direct dollar amount
             newPrice = currentPrice + priceChange;
           }
           
-          // Enforce minimum price of $1.00 (not $0.01)
-          newPrice = Math.max(1.00, newPrice);
+          // Enhanced price floor - use a higher minimum of $5.00 (was $1.00)
+          // Plus a stock-specific floor based on typical price range
+          let stockFloor = 5.00; // Default absolute minimum of $5.00 for all stocks
+          
+          try {
+            // Lookup the stock's symbol to determine typical price range
+            const symbol = stock.symbol;
+            if (symbol) {
+              // Set a stock-specific floor based on typical price
+              const defaultPrice = 
+                symbol === 'AAPL' ? 175.34 :
+                symbol === 'MSFT' ? 320.45 :
+                symbol === 'AMZN' ? 128.95 :
+                symbol === 'GOOGL' ? 145.60 :
+                symbol === 'FB' ? 302.75 :
+                symbol === 'TSLA' ? 245.30 :
+                symbol === 'NFLX' ? 552.80 :
+                symbol === 'NVDA' ? 468.25 :
+                symbol === 'DIS' ? 105.45 :
+                symbol === 'JPM' ? 175.15 :
+                100.00; // Default for custom stocks
+              
+              // Floor is 25% of default price or $5.00, whichever is higher
+              stockFloor = Math.max(5.00, defaultPrice * 0.25);
+            }
+          } catch (e) {
+            console.error('Error determining stock floor price in company event:', e);
+          }
+          
+          // Apply the floor to ensure price doesn't drop too low
+          if (newPrice < stockFloor) {
+            console.log(`📈 Floor protection: ${stock.symbol || 'Stock'} price ${newPrice.toFixed(2)} below floor ${stockFloor.toFixed(2)}`);
+            newPrice = stockFloor;
+          }
           
           // Update the price cache
           stockPriceCache[stock.id] = newPrice;
