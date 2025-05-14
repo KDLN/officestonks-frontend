@@ -6,46 +6,96 @@ import { api } from '../config/api';
  * @param {number} offset - Number of items to skip for pagination
  * @returns {Promise<Array>} - Array of news items
  */
+/**
+ * Import the sample news data for fallback
+ */
+import { sampleNewsItems } from '../utils/news-test-data';
+
 export const getRecentNews = async (limit = 10, offset = 0) => {
   try {
-    // Use the news endpoint through the API URL
-    console.log(`Fetching news with URL: news?limit=${limit}&offset=${offset}`);
+    console.log(`Attempting to fetch news with limit=${limit}, offset=${offset}`);
     
+    // Try regular API call first
     try {
-      // First try: Regular API call
+      console.log(`Fetching news with URL: news?limit=${limit}&offset=${offset}`);
       const response = await api.get(`news?limit=${limit}&offset=${offset}`);
       console.log('News API response:', response);
-      return response.data || response;
-    } catch (initialError) {
-      console.warn('Initial news fetch failed, trying public CORS proxy:', initialError);
       
-      // Second try: Using a public CORS proxy
-      const targetUrl = 'https://officestonks-backend-production.up.railway.app/api/news';
-      const corsProxyUrl = 'https://corsproxy.io/?';
-      const encodedUrl = encodeURIComponent(`${targetUrl}?limit=${limit}&offset=${offset}`);
-      
-      console.log(`Trying CORS proxy: ${corsProxyUrl}${encodedUrl}`);
-      
-      const corsResponse = await fetch(`${corsProxyUrl}${encodedUrl}`, {
-        method: 'GET',
-        mode: 'cors',
-        headers: {
-          'Accept': 'application/json',
-        }
-      });
-      
-      if (!corsResponse.ok) {
-        throw new Error(`CORS proxy failed: ${corsResponse.status} ${corsResponse.statusText}`);
+      // Verify valid data was returned
+      if (response && (Array.isArray(response.data) || Array.isArray(response))) {
+        const newsData = response.data || response;
+        console.log(`Successfully fetched ${newsData.length} news items`);
+        return newsData;
+      } else {
+        console.warn('News API returned invalid data format:', response);
+        throw new Error('Invalid data format returned from API');
       }
+    } catch (initialError) {
+      console.warn('Initial news fetch failed, trying alternative methods:', initialError);
       
-      const data = await corsResponse.json();
-      console.log('CORS proxy response:', data);
-      return data;
+      // Try direct news endpoint without additional path segments
+      try {
+        console.log('Trying direct news-direct endpoint via proxy');
+        // Use the special news-direct endpoint from our proxy
+        const directResponse = await fetch('https://officestonks-proxy-production.up.railway.app/api/news-direct', {
+          method: 'GET',
+          mode: 'cors',
+          headers: {
+            'Accept': 'application/json',
+          }
+        });
+        
+        if (!directResponse.ok) {
+          console.warn(`Direct news endpoint failed: ${directResponse.status}`);
+          throw new Error(`Direct news endpoint failed: ${directResponse.status}`);
+        }
+        
+        const directData = await directResponse.json();
+        console.log('Direct news endpoint response:', directData);
+        
+        if (Array.isArray(directData)) {
+          return directData;
+        } else {
+          throw new Error('Invalid data format from direct endpoint');
+        }
+      } catch (directError) {
+        console.warn('Direct news endpoint failed, trying public CORS proxy:', directError);
+        
+        // Last try: Using a public CORS proxy
+        try {
+          const targetUrl = 'https://officestonks-backend-production.up.railway.app/api/news';
+          const corsProxyUrl = 'https://corsproxy.io/?';
+          const encodedUrl = encodeURIComponent(`${targetUrl}?limit=${limit}&offset=${offset}`);
+          
+          console.log(`Trying public CORS proxy: ${corsProxyUrl}${encodedUrl}`);
+          
+          const corsResponse = await fetch(`${corsProxyUrl}${encodedUrl}`, {
+            method: 'GET',
+            mode: 'cors',
+            headers: {
+              'Accept': 'application/json',
+            }
+          });
+          
+          if (!corsResponse.ok) {
+            throw new Error(`CORS proxy failed: ${corsResponse.status} ${corsResponse.statusText}`);
+          }
+          
+          const data = await corsResponse.json();
+          console.log('CORS proxy response:', data);
+          return data;
+        } catch (corsError) {
+          console.error('All API methods failed, falling back to sample data:', corsError);
+          throw corsError;
+        }
+      }
     }
   } catch (error) {
     console.error('Error fetching recent news (all methods failed):', error);
-    console.error('Request failed, using sample data:', error.message);
-    return []; // Return empty array to trigger fallback to sample data
+    console.info('Returning sample news data as fallback');
+    
+    // Return sample data to use as fallback
+    return JSON.parse(JSON.stringify(sampleNewsItems));
   }
 };
 

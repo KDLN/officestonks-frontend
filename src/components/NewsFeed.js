@@ -117,6 +117,7 @@ const NewsFeed = ({ stockId, sectorId }) => {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [message, setMessage] = useState('');
   const [filter, setFilter] = useState('all'); // 'all', 'market', 'sector', 'company'
   const [minImportance, setMinImportance] = useState(1); // 1-5 scale
   
@@ -129,36 +130,54 @@ const NewsFeed = ({ stockId, sectorId }) => {
     
     try {
       console.log("NewsFeed: Manual reload initiated");
-      const response = await getRecentNews(20);
-      console.log("NewsFeed: Manual reload successful:", response);
-      if (response && (Array.isArray(response) || response.length > 0)) {
-        setNews(response);
-      } else {
-        // Make sure the sample data has all needed properties
-        const enhancedSampleItems = sampleNewsItems.map(item => ({
-          ...item,
-          // Ensure published_at is a Date object for consistent rendering
-          published_at: typeof item.published_at === 'string' ? new Date(item.published_at) : item.published_at,
-          // Ensure importance exists (default to 1)
-          importance: item.importance || 1
-        }));
-        setNews(enhancedSampleItems);
-        console.log('Sample data set from reload:', enhancedSampleItems);
+      
+      // Set a timeout for the reload operation
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Reload timed out after 5 seconds')), 5000)
+      );
+      
+      // Create a promise for the news fetch
+      const newsPromise = (async () => {
+        const response = await getRecentNews(20);
+        console.log("NewsFeed: Manual reload response:", response);
+        
+        if (response && Array.isArray(response) && response.length > 0) {
+          return response;
+        } else {
+          throw new Error('Invalid or empty data returned during reload');
+        }
+      })();
+      
+      // Race between the news fetch and timeout
+      try {
+        const newsData = await Promise.race([newsPromise, timeoutPromise]);
+        setNews(newsData);
+        setMessage('News feed refreshed successfully');
+        setTimeout(() => setMessage(''), 3000); // Clear message after 3 seconds
+      } catch (reloadError) {
+        console.error('Manual reload failed:', reloadError);
+        
+        // Format user-friendly error
+        const errorMessage = reloadError.message.includes('CORS') 
+          ? 'CORS policy error during reload' 
+          : reloadError.message.includes('timed out')
+            ? 'Reload timed out - using sample data instead' 
+            : `Reload failed: ${reloadError.message}`;
+        
+        setError(errorMessage);
+        
+        // Always use sample data if reload fails
+        const sampleData = getSampleNewsItems(); 
+        setNews(sampleData);
       }
     } catch (err) {
-      console.error('Manual reload failed:', err);
-      setError('Manual reload failed: ' + (err.message || 'Unknown error'));
-      // Fall back to sample data
-      // Make sure the sample data has all needed properties
-      const enhancedSampleItems = sampleNewsItems.map(item => ({
-        ...item,
-        // Ensure published_at is a Date object for consistent rendering
-        published_at: typeof item.published_at === 'string' ? new Date(item.published_at) : item.published_at,
-        // Ensure importance exists (default to 1)
-        importance: item.importance || 1
-      }));
-      setNews(enhancedSampleItems);
-      console.log('Sample data set from error handler:', enhancedSampleItems);
+      // Last resort fallback
+      console.error('Critical error during manual reload:', err);
+      setError('Unable to reload news feed. Using sample data instead.');
+      
+      // Even in worst case, provide sample data
+      const sampleData = getSampleNewsItems();
+      setNews(sampleData);
     } finally {
       setLoading(false);
     }
@@ -167,100 +186,88 @@ const NewsFeed = ({ stockId, sectorId }) => {
   // Load initial news data
   useEffect(() => {
     console.log("NewsFeed component mounted - Starting to load data");
-    const loadNews = async () => {
-      try {
-        setLoading(true);
-        console.log("NewsFeed: Fetching news data...");
-        
-        // Add API URL debugging
-        const { API_URL } = await import('../config/api');
-        console.log('Current API URL configuration:', API_URL);
-        
+    const getSampleNewsItems = () => {
+    // Helper function to consistently prepare sample data
+    return sampleNewsItems.map(item => ({
+      ...item,
+      // Ensure published_at is a Date object for consistent rendering
+      published_at: typeof item.published_at === 'string' ? new Date(item.published_at) : item.published_at,
+      // Ensure importance exists (default to 1)
+      importance: item.importance || 1
+    }));
+  };
+  
+  const loadNews = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log("NewsFeed: Fetching news data...");
+      
+      // Add API URL debugging
+      const { API_URL } = await import('../config/api');
+      console.log('Current API URL configuration:', API_URL);
+      
+      // Set a timeout for the entire loading process
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('News fetch timed out after 10 seconds')), 10000)
+      );
+      
+      // Create a promise race between the news fetch and the timeout
+      const newsPromise = (async () => {
         try {
-          // Try to fetch news from API first
-          console.log("NewsFeed: Attempting regular API call to fetch news");
-          let response;
-          
-          try {
-            // First try - Regular API
-            response = await getRecentNews(20);
-          } catch (regularError) {
-            // Second try - Public CORS proxy
-            console.log("NewsFeed: Regular API failed, trying public CORS proxy");
-            response = await getNewsViaProxy(20);
-          }
-          
+          // First method: Regular API via enhanced getRecentNews
+          console.log("NewsFeed: Attempting to fetch news data");
+          const response = await getRecentNews(20);
           console.log("NewsFeed: Data received:", response);
           
-          if (response && (Array.isArray(response) || response.length > 0)) {
-            console.log("NewsFeed: Setting news data from API response");
-            setNews(response);
+          if (response && Array.isArray(response) && response.length > 0) {
+            console.log(`NewsFeed: Setting ${response.length} news items from API`);
+            return response;
           } else {
-            console.warn("NewsFeed: API returned empty or invalid data, falling back to sample data");
-            // Make sure the sample data has all needed properties
-            const enhancedSampleItems = sampleNewsItems.map(item => ({
-              ...item,
-              // Ensure published_at is a Date object for consistent rendering
-              published_at: typeof item.published_at === 'string' ? new Date(item.published_at) : item.published_at,
-              // Ensure importance exists (default to 1)
-              importance: item.importance || 1
-            }));
-            setNews(enhancedSampleItems);
-            console.log('Sample data set:', enhancedSampleItems);
+            console.warn("NewsFeed: API returned empty or invalid data shape");
+            throw new Error('Invalid or empty data returned from API');
           }
-        } catch (apiError) {
-          console.warn('NewsFeed: API fetch failed, using sample data:', apiError);
-          
-          // Log detailed error information
-          console.error('Error details:', {
-            message: apiError.message,
-            stack: apiError.stack,
-            name: apiError.name
-          });
-          
-          // Display more informative error message
-          const errorMessage = apiError.message.includes('CORS') 
-            ? 'CORS policy error - Backend may not allow requests from this origin' 
-            : apiError.message.includes('NetworkError') 
-              ? 'Network error - Unable to connect to the API' 
-              : `API error: ${apiError.message}`;
-              
-          setError(`${errorMessage} - Using sample data instead`);
-          
-          // Fall back to sample data if API fetch fails
-          console.log("NewsFeed: Loading sample news data instead");
-          // Make sure the sample data has all needed properties
-          const enhancedSampleItems = sampleNewsItems.map(item => ({
-            ...item,
-            // Ensure published_at is a Date object for consistent rendering
-            published_at: typeof item.published_at === 'string' ? new Date(item.published_at) : item.published_at,
-            // Ensure importance exists (default to 1)
-            importance: item.importance || 1
-          }));
-          setNews(enhancedSampleItems);
-          console.log('Sample data set:', enhancedSampleItems);
+        } catch (error) {
+          console.warn('NewsFeed: Enhanced news fetch failed:', error);
+          throw error; // Let the next level catch handle this
         }
+      })();
+      
+      // Race between the news fetch and the timeout
+      try {
+        const newsData = await Promise.race([newsPromise, timeoutPromise]);
+        setNews(newsData);
+        setError(null);
+      } catch (raceError) {
+        console.error('NewsFeed: News fetch race failed:', raceError);
         
-      } catch (err) {
-        console.error('NewsFeed: Error loading news:', err);
-        setError('Failed to load news feed. Please try again later.');
+        // Format a user-friendly error message
+        const errorMessage = raceError.message.includes('CORS') 
+          ? 'CORS policy error - Backend may not allow requests from this origin' 
+          : raceError.message.includes('NetworkError') || raceError.message.includes('timed out')
+            ? 'Network error - Unable to connect to the news API' 
+            : `API error: ${raceError.message}`;
         
-        // Last resort: use sample data even if everything fails
-        console.log("NewsFeed: Using sample data as last resort");
-        // Make sure the sample data has all needed properties
-        const enhancedSampleItems = sampleNewsItems.map(item => ({
-          ...item,
-          // Ensure published_at is a Date object for consistent rendering
-          published_at: typeof item.published_at === 'string' ? new Date(item.published_at) : item.published_at,
-          // Ensure importance exists (default to 1)
-          importance: item.importance || 1
-        }));
-        setNews(enhancedSampleItems);
-        console.log('Sample data set:', enhancedSampleItems);
-      } finally {
-        setLoading(false);
+        setError(`${errorMessage} - Using sample data instead`);
+        
+        // Always use sample data if the API fails
+        console.log("NewsFeed: Using sample news data as fallback");
+        const sampleData = getSampleNewsItems();
+        setNews(sampleData);
       }
-    };
+    } catch (err) {
+      // This is the very last fallback if everything else failed
+      console.error('NewsFeed: Critical error loading news:', err);
+      setError('Unable to load news feed. Using sample data instead.');
+      
+      // Even in the worst case, still provide some data
+      console.log("NewsFeed: Using sample data as last resort");
+      const sampleData = getSampleNewsItems();
+      setNews(sampleData);
+    } finally {
+      setLoading(false);
+    }
+  };
     
     loadNews();
   }, [stockId, sectorId]);
@@ -456,7 +463,7 @@ const NewsFeed = ({ stockId, sectorId }) => {
         {/* Debug info section - API URL and Connection status */}
         <div className="debug-info" style={{ fontSize: '12px', marginBottom: '10px', color: '#666' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-            <div>Status: {loading ? 'Loading...' : error ? 'Error' : 'Loaded'}</div>
+            <div>Status: {loading ? 'Loading...' : error ? 'Error' : message ? 'Success' : 'Loaded'}</div>
             <div>
               Connection: <span style={{
                 color: window.socket && window.socket.readyState === 1 ? '#4caf50' : '#f44336',
@@ -488,6 +495,11 @@ const NewsFeed = ({ stockId, sectorId }) => {
               Add Test Item
             </button>
           </div>
+          {message && (
+            <div style={{ marginTop: '5px', display: 'flex', justifyContent: 'space-between' }}>
+              <div style={{ color: '#4caf50', fontSize: '11px', fontWeight: 'bold' }}>{message}</div>
+            </div>
+          )}
           {error && (
             <div style={{ marginTop: '5px', display: 'flex', justifyContent: 'space-between' }}>
               <div style={{ color: '#d32f2f', fontSize: '11px' }}>{error}</div>
