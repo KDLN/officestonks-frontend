@@ -13,37 +13,41 @@ const StockList = () => {
   const [sortBy, setSortBy] = useState('symbol');
   const [sortDirection, setSortDirection] = useState('asc');
 
-  // Fetch stocks on component mount
+  // Fetch stocks
+  const fetchStocks = async () => {
+    try {
+      const stocksData = await getAllStocks();
+
+      // Apply cached prices to stocks
+      const updatedStocks = stocksData.map(stock => {
+        if (stock && stock.id) {
+          // Get the latest price from cache or use the current price
+          const latestPrice = getLatestPrice(stock.id, stock.current_price);
+          return { ...stock, current_price: latestPrice };
+        }
+        return stock;
+      });
+
+      setStocks(updatedStocks);
+      setLoading(false);
+    } catch (err) {
+      setError('Failed to load stocks. Please try again later.');
+      setLoading(false);
+    }
+  };
+
+  // Fetch stocks on component mount and set up event listeners
   useEffect(() => {
-    const fetchStocks = async () => {
-      try {
-        const stocksData = await getAllStocks();
-
-        // Apply cached prices to stocks
-        const updatedStocks = stocksData.map(stock => {
-          if (stock && stock.id) {
-            // Get the latest price from cache or use the current price
-            const latestPrice = getLatestPrice(stock.id, stock.current_price);
-            return { ...stock, current_price: latestPrice };
-          }
-          return stock;
-        });
-
-        setStocks(updatedStocks);
-        setLoading(false);
-      } catch (err) {
-        setError('Failed to load stocks. Please try again later.');
-        setLoading(false);
-      }
-    };
-
+    console.log('StockList component mounted - initializing');
+    
+    // Initial fetch
     fetchStocks();
 
     // Initialize WebSocket connection
     initWebSocket();
 
     // Listen for stock price updates
-    const removeListener = addListener('stock_update', (message) => {
+    const stockUpdateListener = addListener('stock_update', (message) => {
       setStocks(prevStocks => 
         prevStocks.map(stock => 
           stock.id === message.stock_id 
@@ -57,10 +61,42 @@ const StockList = () => {
       );
     });
 
+    // Listen for custom events from admin actions
+    const handleStockCreated = () => {
+      console.log('New stock created - refreshing stock list');
+      fetchStocks();
+    };
+
+    const handleStockReset = () => {
+      console.log('Stock prices reset - refreshing stock list');
+      fetchStocks();
+    };
+
+    const handleStockEdited = () => {
+      console.log('Stock edited - refreshing stock list');
+      fetchStocks();
+    };
+
+    // Add DOM event listeners for these custom events
+    document.addEventListener('stock-created', handleStockCreated);
+    document.addEventListener('admin-stocks-reset-complete', handleStockReset);
+    document.addEventListener('stock-edit-complete', handleStockEdited);
+    document.addEventListener('stock-price-cache-cleared', handleStockReset);
+    document.addEventListener('system-reset-complete', handleStockReset);
+
     // Cleanup on unmount
     return () => {
-      removeListener();
+      stockUpdateListener();
       closeWebSocket();
+      
+      // Remove custom event listeners
+      document.removeEventListener('stock-created', handleStockCreated);
+      document.removeEventListener('admin-stocks-reset-complete', handleStockReset);
+      document.removeEventListener('stock-edit-complete', handleStockEdited);
+      document.removeEventListener('stock-price-cache-cleared', handleStockReset);
+      document.removeEventListener('system-reset-complete', handleStockReset);
+      
+      console.log('StockList component unmounted - cleaned up listeners');
     };
   }, []);
 

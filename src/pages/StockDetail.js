@@ -20,60 +20,64 @@ const StockDetail = () => {
   const [success, setSuccess] = useState(null);
   const [priceChange, setPriceChange] = useState(null);
 
+  // Define a fetch function that can be reused
+  const fetchData = async () => {
+    try {
+      const [stockData, portfolioData] = await Promise.all([
+        getStockById(stockId),
+        getUserPortfolio()
+      ]);
+
+      // Apply cached price to stock if available
+      if (stockData && stockData.id) {
+        const latestPrice = getLatestPrice(stockData.id, stockData.current_price);
+        stockData.current_price = latestPrice;
+      }
+
+      // Apply cached prices to portfolio items
+      if (portfolioData && portfolioData.portfolio_items) {
+        let updatedStockValue = 0;
+
+        portfolioData.portfolio_items = portfolioData.portfolio_items.map(item => {
+          if (item && item.stock && item.stock_id) {
+            // Get the latest price from cache or use the current price
+            const latestPrice = getLatestPrice(item.stock_id, item.stock.current_price);
+
+            // Update the stock with the latest price
+            item.stock.current_price = latestPrice;
+
+            // Add to the total stock value
+            updatedStockValue += item.quantity * latestPrice;
+          }
+          return item;
+        });
+
+        // Update the portfolio totals
+        portfolioData.stock_value = updatedStockValue;
+        portfolioData.total_value = portfolioData.cash_balance + updatedStockValue;
+      }
+
+      setStock(stockData);
+      setPortfolio(portfolioData);
+      setLoading(false);
+    } catch (err) {
+      setError('Failed to load stock data. Please try again later.');
+      setLoading(false);
+    }
+  };
+
   // Fetch stock and portfolio data
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [stockData, portfolioData] = await Promise.all([
-          getStockById(stockId),
-          getUserPortfolio()
-        ]);
-
-        // Apply cached price to stock if available
-        if (stockData && stockData.id) {
-          const latestPrice = getLatestPrice(stockData.id, stockData.current_price);
-          stockData.current_price = latestPrice;
-        }
-
-        // Apply cached prices to portfolio items
-        if (portfolioData && portfolioData.portfolio_items) {
-          let updatedStockValue = 0;
-
-          portfolioData.portfolio_items = portfolioData.portfolio_items.map(item => {
-            if (item && item.stock && item.stock_id) {
-              // Get the latest price from cache or use the current price
-              const latestPrice = getLatestPrice(item.stock_id, item.stock.current_price);
-
-              // Update the stock with the latest price
-              item.stock.current_price = latestPrice;
-
-              // Add to the total stock value
-              updatedStockValue += item.quantity * latestPrice;
-            }
-            return item;
-          });
-
-          // Update the portfolio totals
-          portfolioData.stock_value = updatedStockValue;
-          portfolioData.total_value = portfolioData.cash_balance + updatedStockValue;
-        }
-
-        setStock(stockData);
-        setPortfolio(portfolioData);
-        setLoading(false);
-      } catch (err) {
-        setError('Failed to load stock data. Please try again later.');
-        setLoading(false);
-      }
-    };
-
+    console.log(`StockDetail component mounted for stock ID: ${stockId}`);
+    
+    // Initial data fetch
     fetchData();
 
     // Initialize WebSocket connection
     initWebSocket();
 
     // Listen for stock price updates
-    const removeListener = addListener('stock_update', (message) => {
+    const stockUpdateListener = addListener('stock_update', (message) => {
       if (message.stock_id === stockId) {
         setStock(prevStock => {
           if (!prevStock) return null;
@@ -93,10 +97,38 @@ const StockDetail = () => {
       }
     });
 
+    // Listen for custom events from admin actions
+    const handleStockReset = () => {
+      console.log('Stock prices reset - refreshing stock details');
+      fetchData();
+    };
+
+    const handleStockEdited = (event) => {
+      // Check if the edited stock is the one we're viewing
+      if (event && event.detail && event.detail.stockId === stockId) {
+        console.log(`Current stock edited - refreshing details for stock ID: ${stockId}`);
+        fetchData();
+      }
+    };
+
+    // Add DOM event listeners for these custom events
+    document.addEventListener('admin-stocks-reset-complete', handleStockReset);
+    document.addEventListener('stock-edit-complete', handleStockEdited);
+    document.addEventListener('stock-price-cache-cleared', handleStockReset);
+    document.addEventListener('system-reset-complete', handleStockReset);
+
     // Cleanup on unmount
     return () => {
-      removeListener();
+      stockUpdateListener();
       closeWebSocket();
+      
+      // Remove custom event listeners
+      document.removeEventListener('admin-stocks-reset-complete', handleStockReset);
+      document.removeEventListener('stock-edit-complete', handleStockEdited);
+      document.removeEventListener('stock-price-cache-cleared', handleStockReset);
+      document.removeEventListener('system-reset-complete', handleStockReset);
+      
+      console.log(`StockDetail component unmounted for stock ID: ${stockId}`);
     };
   }, [stockId]);
 
