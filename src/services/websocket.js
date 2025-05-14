@@ -56,6 +56,13 @@ if (typeof window !== 'undefined') {
 // Cache to store latest stock prices across page navigations
 export const stockPriceCache = {};
 
+// Paused stocks - map of stock IDs that are currently being updated manually
+// and should not receive WebSocket updates
+export const pausedStocks = new Set();
+
+// Flag to indicate if all stock updates are paused globally
+let allStockUpdatesPaused = false;
+
 // Initialize WebSocket connection
 export const initWebSocket = () => {
   if (socket) {
@@ -268,14 +275,37 @@ export const initWebSocket = () => {
       // Parse and process the message
       const message = JSON.parse(jsonStr);
       
-      // Update stock price cache if it's a stock update
+      // Update stock price cache if it's a stock update, but only if not paused
       if (message.type === 'stock_update' || (message.id && message.current_price)) {
         const stockId = message.stock_id || message.id;
         const price = message.price || message.current_price;
         
         if (stockId && price) {
-          // Store the latest price in cache
-          stockPriceCache[stockId] = price;
+          // Check if this stock is currently paused
+          const isPaused = pausedStocks.has(Number(stockId)) || pausedStocks.has(String(stockId)) || allStockUpdatesPaused;
+          
+          if (isPaused) {
+            console.log(`Skipping WebSocket update for paused stock ID: ${stockId}`);
+          } else {
+            // If not paused, store the latest price in cache
+            stockPriceCache[stockId] = price;
+            console.log(`Updated stockPriceCache for stock ID: ${stockId}, new price: ${price}`);
+          }
+        }
+      }
+      
+      // Skip calling listeners if global updates are paused
+      if (allStockUpdatesPaused && (message.type === 'stock_update' || message.type === 'market_event')) {
+        console.log(`Skipping listeners for message type ${message.type} because all stock updates are paused`);
+        return;
+      }
+      
+      // For stock-specific updates, check if the specific stock is paused
+      if (message.type === 'stock_update' || (message.id && message.current_price)) {
+        const stockId = message.stock_id || message.id;
+        if (stockId && (pausedStocks.has(Number(stockId)) || pausedStocks.has(String(stockId)))) {
+          console.log(`Skipping listeners for paused stock ID: ${stockId}`);
+          return;
         }
       }
       
@@ -428,6 +458,90 @@ export const getLatestPrice = (stockId, defaultPrice) => {
   return stockId in stockPriceCache ? stockPriceCache[stockId] : defaultPrice;
 };
 
+/**
+ * Pause WebSocket updates for a specific stock
+ * @param {string|number} stockId - ID of the stock to pause
+ */
+export const pauseStockUpdates = (stockId) => {
+  if (!stockId) return;
+  
+  console.log(`Pausing WebSocket updates for stock ID: ${stockId}`);
+  pausedStocks.add(stockId);
+  
+  // Log all paused stocks for debugging
+  console.log('Currently paused stocks:', Array.from(pausedStocks));
+  
+  // Dispatch an event for other components to know
+  document.dispatchEvent(new CustomEvent('stock-updates-paused', { 
+    detail: { stockId, timestamp: new Date().toISOString() } 
+  }));
+};
+
+/**
+ * Resume WebSocket updates for a specific stock
+ * @param {string|number} stockId - ID of the stock to resume
+ */
+export const resumeStockUpdates = (stockId) => {
+  if (!stockId) return;
+  
+  console.log(`Resuming WebSocket updates for stock ID: ${stockId}`);
+  pausedStocks.delete(stockId);
+  pausedStocks.delete(String(stockId));
+  pausedStocks.delete(Number(stockId));
+  
+  // Log all paused stocks for debugging
+  console.log('Currently paused stocks:', Array.from(pausedStocks));
+  
+  // Dispatch an event for other components to know
+  document.dispatchEvent(new CustomEvent('stock-updates-resumed', { 
+    detail: { stockId, timestamp: new Date().toISOString() } 
+  }));
+};
+
+/**
+ * Pause all stock WebSocket updates
+ */
+export const pauseAllStockUpdates = () => {
+  console.log('Pausing all WebSocket stock updates');
+  allStockUpdatesPaused = true;
+  
+  // Dispatch an event for other components to know
+  document.dispatchEvent(new CustomEvent('all-stock-updates-paused', { 
+    detail: { timestamp: new Date().toISOString() } 
+  }));
+};
+
+/**
+ * Resume all stock WebSocket updates
+ */
+export const resumeAllStockUpdates = () => {
+  console.log('Resuming all WebSocket stock updates');
+  allStockUpdatesPaused = false;
+  
+  // Dispatch an event for other components to know
+  document.dispatchEvent(new CustomEvent('all-stock-updates-resumed', { 
+    detail: { timestamp: new Date().toISOString() } 
+  }));
+};
+
+/**
+ * Set a stock's price in the cache directly
+ * This is used when manually updating a stock price
+ * @param {string|number} stockId - ID of the stock
+ * @param {number} price - New price for the stock
+ */
+export const setStockPrice = (stockId, price) => {
+  if (!stockId) return;
+  
+  console.log(`Manually setting stock price for ID: ${stockId} to ${price}`);
+  stockPriceCache[stockId] = price;
+  
+  // Dispatch an event for other components to know
+  document.dispatchEvent(new CustomEvent('stock-price-manually-set', { 
+    detail: { stockId, price, timestamp: new Date().toISOString() } 
+  }));
+};
+
 // React hook for WebSocket integration
 export const useWebSocket = () => {
   // Initialize WebSocket connection on component mount
@@ -452,6 +566,13 @@ export const useWebSocket = () => {
     addListener: memoizedAddListener,
     removeListener,
     closeWebSocket,
-    getLatestPrice
+    getLatestPrice,
+    pauseStockUpdates,
+    resumeStockUpdates,
+    pauseAllStockUpdates,
+    resumeAllStockUpdates,
+    setStockPrice,
+    isPaused: (stockId) => pausedStocks.has(stockId) || allStockUpdatesPaused,
+    isAllPaused: () => allStockUpdatesPaused
   };
 };

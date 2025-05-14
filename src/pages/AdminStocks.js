@@ -179,20 +179,75 @@ const AdminStocks = () => {
     setLoading(true);
     
     try {
-      await adminUpdateStock(editingStock.id, {
+      // Import WebSocket utilities for pausing/resuming updates
+      let pauseStockUpdates, resumeStockUpdates, setStockPrice;
+      try {
+        const websocketModule = require('../services/websocket');
+        pauseStockUpdates = websocketModule.pauseStockUpdates;
+        resumeStockUpdates = websocketModule.resumeStockUpdates;
+        setStockPrice = websocketModule.setStockPrice;
+      } catch (e) {
+        console.warn('Could not import WebSocket utilities:', e);
+      }
+      
+      // Pause WebSocket updates for this specific stock while updating
+      const stockId = editingStock.id;
+      if (pauseStockUpdates) {
+        console.log(`Pausing WebSocket updates for stock ID: ${stockId} during edit`);
+        pauseStockUpdates(stockId);
+      }
+      
+      const newPrice = parseFloat(formData.current_price);
+      
+      // Update the stock in the database/localStorage
+      await adminUpdateStock(stockId, {
         symbol: formData.symbol,
         name: formData.name,
-        current_price: parseFloat(formData.current_price),
+        current_price: newPrice,
         description: formData.description,
         sector: formData.sector,
         volume: parseInt(formData.volume, 10)
       });
+      
+      // Manually update the price in the WebSocket cache
+      if (setStockPrice) {
+        console.log(`Manually updating stock price for ID: ${stockId} to ${newPrice}`);
+        setStockPrice(stockId, newPrice);
+      }
+      
+      // Resume WebSocket updates for this stock after a short delay
+      setTimeout(() => {
+        if (resumeStockUpdates) {
+          console.log(`Resuming WebSocket updates for stock ID: ${stockId} after edit`);
+          resumeStockUpdates(stockId);
+          
+          // Dispatch a custom event for components to know stock was updated
+          document.dispatchEvent(new CustomEvent('stock-edit-complete', {
+            detail: {
+              stockId,
+              newPrice,
+              timestamp: new Date().toISOString()
+            }
+          }));
+        }
+      }, 500); // Small delay to allow UI to update
       
       setMessage('Stock updated successfully');
       setShowModal(false);
       fetchStocks(); // Refresh stock list
     } catch (err) {
       setError(`Failed to update stock: ${err.message}`);
+      
+      // Make sure to resume stock updates even if there was an error
+      try {
+        const { resumeStockUpdates } = require('../services/websocket');
+        if (resumeStockUpdates) {
+          console.log(`Resuming WebSocket updates for stock ID: ${editingStock.id} after error`);
+          resumeStockUpdates(editingStock.id);
+        }
+      } catch (e) {
+        console.error('Failed to resume stock updates:', e);
+      }
     } finally {
       setLoading(false);
     }
@@ -204,14 +259,42 @@ const AdminStocks = () => {
     setLoading(true);
     
     try {
-      await adminCreateStock({
+      // Import WebSocket utilities for setting stock price
+      let setStockPrice;
+      try {
+        const websocketModule = require('../services/websocket');
+        setStockPrice = websocketModule.setStockPrice;
+      } catch (e) {
+        console.warn('Could not import WebSocket utilities:', e);
+      }
+      
+      const initialPrice = parseFloat(formData.current_price);
+      
+      // Create the stock in the database/localStorage
+      const newStock = await adminCreateStock({
         symbol: formData.symbol,
         name: formData.name,
-        current_price: parseFloat(formData.current_price),
+        current_price: initialPrice,
         description: formData.description,
         sector: formData.sector,
         volume: parseInt(formData.volume, 10)
       });
+      
+      // If we got the ID of the new stock, set its price in the WebSocket cache
+      if (newStock && newStock.id && setStockPrice) {
+        console.log(`Setting initial price for new stock ID: ${newStock.id} to ${initialPrice}`);
+        setStockPrice(newStock.id, initialPrice);
+          
+        // Dispatch a custom event for components to know a new stock was created
+        document.dispatchEvent(new CustomEvent('stock-created', {
+          detail: {
+            stockId: newStock.id,
+            symbol: formData.symbol,
+            price: initialPrice,
+            timestamp: new Date().toISOString()
+          }
+        }));
+      }
       
       setMessage('Stock created successfully');
       setShowCreateModal(false);

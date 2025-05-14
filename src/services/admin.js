@@ -629,15 +629,18 @@ export const resetStockPrices = async () => {
   try {
     console.log('Resetting stock prices...');
 
-    // Get stockPriceCache to reset
-    let stockPriceCache;
-    try {
-      stockPriceCache = require('./websocket').stockPriceCache;
-      console.log('Successfully imported stockPriceCache from websocket.js');
-    } catch (e) {
-      console.warn('Could not import stockPriceCache, will continue without it:', e);
-      stockPriceCache = {};
-    }
+    // Import WebSocket utilities and pause all stock updates during the reset
+    const websocketModule = require('./websocket');
+    const { 
+      stockPriceCache, 
+      pauseAllStockUpdates, 
+      resumeAllStockUpdates,
+      setStockPrice 
+    } = websocketModule;
+    
+    // Pause all WebSocket stock updates during the reset operation
+    console.log('Pausing all WebSocket stock updates during price reset');
+    pauseAllStockUpdates();
     
     // First attempt API call to reset prices
     let apiSuccess = false;
@@ -676,14 +679,20 @@ export const resetStockPrices = async () => {
           reset_date: new Date().toISOString()
         }));
         
-        // Save updated stocks
+        // Save updated stocks to localStorage
         localStorage.setItem('mockStocksData', JSON.stringify(resetStocks));
         console.log(`Reset prices for ${stockCount} stocks in localStorage`);
         
-        // Also reset prices in stockPriceCache
+        // Manually update each stock price in the cache
         if (stockPriceCache) {
           resetStocks.forEach(stock => {
-            stockPriceCache[stock.id] = stock.current_price;
+            // Use the setStockPrice function to trigger an event
+            if (setStockPrice) {
+              setStockPrice(stock.id, stock.current_price);
+            } else {
+              // Fallback if setStockPrice isn't available
+              stockPriceCache[stock.id] = stock.current_price;
+            }
           });
           console.log(`Reset ${Object.keys(stockPriceCache).length} prices in stockPriceCache`);
         }
@@ -700,6 +709,21 @@ export const resetStockPrices = async () => {
     mockData.resetCount = (mockData.resetCount || 0) + 1;
     saveMockData(mockData);
     
+    // Resume all WebSocket stock updates after reset is complete
+    console.log('Resuming all WebSocket stock updates after price reset');
+    setTimeout(() => {
+      resumeAllStockUpdates();
+      
+      // Dispatch a custom event for components to know prices were reset
+      document.dispatchEvent(new CustomEvent('stocks-reset-complete', {
+        detail: {
+          timestamp: new Date().toISOString(),
+          stockCount,
+          apiSuccess
+        }
+      }));
+    }, 1000); // Small delay to allow UI to update
+    
     // Return success result
     return { 
       success: true,
@@ -710,6 +734,18 @@ export const resetStockPrices = async () => {
     };
   } catch (error) {
     console.error('Error resetting stock prices:', error);
+    
+    // Make sure to resume stock updates even if there was an error
+    try {
+      const { resumeAllStockUpdates } = require('./websocket');
+      if (resumeAllStockUpdates) {
+        console.log('Resuming all WebSocket stock updates after error');
+        resumeAllStockUpdates();
+      }
+    } catch (e) {
+      console.error('Failed to resume stock updates:', e);
+    }
+    
     return { 
       success: false, 
       error: true,
