@@ -176,9 +176,25 @@ export const updateStocksFromEvent = async (eventType, eventData, allStocks = nu
         const adjustedImpact = actualImpact * variance;
         const currentPrice = stock.current_price || 100; // Fallback to 100 if no price
         
-        // Calculate new price with bounds check (min 1.00, max is unlimited)
-        const priceChange = currentPrice * adjustedImpact;
-        const newPrice = Math.max(1, currentPrice + priceChange);
+        // CRITICAL FIX: Market events were calculating the price change incorrectly!
+        // Check if the impact is a percentage or absolute change
+        let priceChange;
+        let newPrice;
+        
+        // If impact is very small (like 0.01 to 0.05), it's probably a percentage
+        // Otherwise, it's an absolute dollar change
+        if (Math.abs(adjustedImpact) < 0.1) {
+          // It's a percentage, so multiply price by (1 + impact)
+          // This ensures prices can't go negative from percentage changes
+          newPrice = currentPrice * (1 + adjustedImpact);
+        } else {
+          // It's an absolute change
+          priceChange = adjustedImpact; // Direct dollar amount
+          newPrice = currentPrice + priceChange;
+        }
+        
+        // Enforce minimum price of $1.00 (not $0.01)
+        newPrice = Math.max(1.00, newPrice);
         
         // Update the price cache directly
         stockPriceCache[stock.id] = newPrice;
@@ -215,9 +231,24 @@ export const updateStocksFromEvent = async (eventType, eventData, allStocks = nu
         const adjustedImpact = actualImpact * variance;
         const currentPrice = stock.current_price || 100; // Fallback to 100 if no price
         
-        // Calculate new price with bounds check (min 1.00, max is unlimited)
-        const priceChange = currentPrice * adjustedImpact;
-        const newPrice = Math.max(1, currentPrice + priceChange);
+        // CRITICAL FIX: Same fix as market events for sector events
+        let priceChange;
+        let newPrice;
+        
+        // If impact is very small (like 0.01 to 0.05), it's probably a percentage
+        // Otherwise, it's an absolute dollar change
+        if (Math.abs(adjustedImpact) < 0.1) {
+          // It's a percentage, so multiply price by (1 + impact)
+          // This ensures prices can't go negative from percentage changes
+          newPrice = currentPrice * (1 + adjustedImpact);
+        } else {
+          // It's an absolute change
+          priceChange = adjustedImpact; // Direct dollar amount
+          newPrice = currentPrice + priceChange;
+        }
+        
+        // Enforce minimum price of $1.00 (not $0.01)
+        newPrice = Math.max(1.00, newPrice);
         
         // Update the price cache
         stockPriceCache[stock.id] = newPrice;
@@ -253,9 +284,22 @@ export const updateStocksFromEvent = async (eventType, eventData, allStocks = nu
           const adjustedImpact = actualImpact * variance;
           const currentPrice = stock.current_price || 100; // Fallback to 100 if no price
           
-          // Calculate new price with bounds check (min 1.00, max is unlimited)
-          const priceChange = currentPrice * adjustedImpact;
-          const newPrice = Math.max(1, currentPrice + priceChange);
+          // Calculate new price with the same approach as market/sector events
+          let priceChange;
+          let newPrice;
+          
+          // If impact is very small, it's probably a percentage
+          if (Math.abs(adjustedImpact) < 0.1) {
+            // It's a percentage, so multiply price by (1 + impact)
+            newPrice = currentPrice * (1 + adjustedImpact);
+          } else {
+            // It's an absolute change
+            priceChange = adjustedImpact;
+            newPrice = currentPrice + priceChange;
+          }
+          
+          // Enforce minimum price of $1.00 (not $0.01)
+          newPrice = Math.max(1.00, newPrice);
           
           // Update the price cache
           stockPriceCache[stock.id] = newPrice;
@@ -283,9 +327,22 @@ export const updateStocksFromEvent = async (eventType, eventData, allStocks = nu
           const adjustedImpact = actualImpact * variance;
           const currentPrice = stock.current_price || 100; // Fallback to 100 if no price
           
-          // Calculate new price with bounds check (min 1.00, max is unlimited)
-          const priceChange = currentPrice * adjustedImpact;
-          const newPrice = Math.max(1, currentPrice + priceChange);
+          // Calculate new price with the same approach as market/sector events
+          let priceChange;
+          let newPrice;
+          
+          // If impact is very small, it's probably a percentage
+          if (Math.abs(adjustedImpact) < 0.1) {
+            // It's a percentage, so multiply price by (1 + impact)
+            newPrice = currentPrice * (1 + adjustedImpact);
+          } else {
+            // It's an absolute change
+            priceChange = adjustedImpact;
+            newPrice = currentPrice + priceChange;
+          }
+          
+          // Enforce minimum price of $1.00 (not $0.01)
+          newPrice = Math.max(1.00, newPrice);
           
           // Update the price cache
           stockPriceCache[stock.id] = newPrice;

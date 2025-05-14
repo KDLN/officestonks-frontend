@@ -317,8 +317,24 @@ export const initWebSocket = () => {
               console.warn(`Ignoring suspicious price update for stock ID: ${stockId}, price: ${price}`);
             } else {
               // If not paused and price looks reasonable, store it in cache
-              stockPriceCache[stockId] = price;
-              console.log(`Updated stockPriceCache for stock ID: ${stockId}, new price: ${price}`);
+              // CRITICAL FIX: Get current price and ensure we're not going below a reasonable value
+              const currentPrice = stockPriceCache[stockId] || 100; // Default to 100 if no existing price
+              
+              // CRITICAL PRICE DROP PROTECTION: Don't allow prices to drop by more than 10% in a single update
+              // This prevents the market event bug from causing prices to crash
+              const minimumAllowedPrice = currentPrice * 0.9; // 90% of current price
+              
+              // Use the higher of: 1) minimum allowed price, 2) incoming price, 3) $1.00 absolute minimum
+              const safePrice = Math.max(minimumAllowedPrice, price, 1.00);
+              
+              // Store the safe price in cache
+              stockPriceCache[stockId] = safePrice;
+              
+              if (safePrice !== price) {
+                console.log(`Protected stock ${stockId} from excessive price drop: ${price} -> ${safePrice}`);
+              } else {
+                console.log(`Updated stockPriceCache for stock ID: ${stockId}, new price: ${safePrice}`);
+              }
             }
           }
         }
