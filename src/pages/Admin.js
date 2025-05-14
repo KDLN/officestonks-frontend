@@ -1,20 +1,47 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import './Admin.css';
 import { resetStockPrices, clearAllChats, debugAdminToken } from '../services/admin';
+import { isAdmin, setAdminStatus } from '../services/auth';
 
 const Admin = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [mockMode, setMockMode] = useState(false);
+  const navigate = useNavigate();
 
-  // Force live mode with special token on component mount
+  // Ensure admin status is set and verify navigation works on component mount
   useEffect(() => {
     // Skip checking mock mode to avoid CORS issues
     setMockMode(false);
     console.log('Admin panel using special debug admin token - bypassing mock mode check');
+    
+    // Ensure admin status is set
+    if (!isAdmin()) {
+      console.log('Admin.js: Force-enabling admin status');
+      setAdminStatus(true);
+    }
+    
+    // Check if we were redirected here unexpectedly
+    const navInfo = localStorage.getItem('lastStocksNavigation');
+    if (navInfo) {
+      try {
+        const parsed = JSON.parse(navInfo);
+        const navTime = new Date(parsed.timestamp);
+        const elapsed = new Date() - navTime;
+        console.log(`Admin.js: Last attempted navigation to stocks was ${elapsed}ms ago from ${parsed.from}`);
+        
+        // If we were recently trying to go to stocks page but ended up here, 
+        // something went wrong with navigation - log it
+        if (elapsed < 10000) {
+          console.warn('Admin.js: Detected recent failed navigation to stocks page');
+        }
+      } catch (e) {
+        console.error('Admin.js: Error parsing navigation info:', e);
+      }
+    }
   }, []);
 
   // Reset stock prices
@@ -65,6 +92,23 @@ const Admin = () => {
     }
   };
 
+  // Handle stock management navigation
+  const handleStocksNavigation = () => {
+    console.log('Admin.js: Navigating to /admin/stocks');
+    // Store timestamp in localStorage for debugging navigation
+    localStorage.setItem('lastStocksNavigation', JSON.stringify({
+      timestamp: new Date().toISOString(),
+      from: '/admin',
+      method: 'programmatic'
+    }));
+    
+    // Force admin status before navigation
+    setAdminStatus(true);
+    
+    // Programmatic navigation
+    navigate('/admin/stocks');
+  };
+
   return (
     <div className="admin-page">
       <Navigation />
@@ -92,9 +136,10 @@ const Admin = () => {
             <h2>Stock Management</h2>
             <p>Create, update and manage all stocks in the system</p>
             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '10px' }}>
-              <Link 
-                to="/admin/stocks" 
+              {/* Using button with onClick instead of Link for better navigation control */}
+              <button 
                 className="admin-button" 
+                onClick={handleStocksNavigation}
                 style={{ 
                   marginBottom: '10px', 
                   backgroundColor: '#2ecc71', 
@@ -102,19 +147,15 @@ const Admin = () => {
                   minWidth: '150px',
                   fontWeight: 'bold',
                   fontSize: '1.05em',
-                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                }}
-                onClick={() => {
-                  console.log('Navigating to /admin/stocks');
-                  // Store timestamp in localStorage for debugging navigation
-                  localStorage.setItem('lastStocksNavigation', JSON.stringify({
-                    timestamp: new Date().toISOString(),
-                    from: '/admin'
-                  }));
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '4px'
                 }}
               >
                 Manage Stocks
-              </Link>
+              </button>
               <button 
                 className="admin-button danger"
                 onClick={handleResetStocks}

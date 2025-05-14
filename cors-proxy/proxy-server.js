@@ -91,12 +91,58 @@ app.options('*', (req, res) => {
   res.status(204).end();
 });
 
-// Health check endpoint
+// Health check endpoint with permissive CORS headers
 app.get('/health', (req, res) => {
+  // Add CORS headers explicitly - allowing ALL origins for this endpoint
+  const origin = req.headers.origin;
+  
+  // Always allow any origin for this specific endpoint
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  // Don't use credentials with wildcard origin
+  res.header('Access-Control-Allow-Credentials', 'false');
+  res.header('Access-Control-Max-Age', '86400');
+  
+  console.log(`Health check request from origin: ${origin || 'unknown'}`);
+  
+  // Send health status response
   res.json({
     status: 'ok',
     service: 'CORS Proxy',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    version: '1.0.1',
+    cors_enabled: true
+  });
+});
+
+// Special health check endpoint with permissive CORS - alternative path
+app.get('/api/health-check', (req, res) => {
+  // Add CORS headers explicitly - allowing ALL origins for this endpoint
+  const origin = req.headers.origin;
+  
+  // Always allow any origin for this specific endpoint
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  // Don't use credentials with wildcard origin
+  res.header('Access-Control-Allow-Credentials', 'false');
+  res.header('Access-Control-Max-Age', '86400');
+  
+  console.log(`API health check request from origin: ${origin || 'unknown'}`);
+  
+  // For OPTIONS requests, just respond OK immediately
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  
+  // Send health status response
+  res.json({
+    status: 'ok',
+    service: 'CORS Proxy',
+    timestamp: new Date().toISOString(),
+    version: '1.0.1',
+    cors_enabled: true
   });
 });
 

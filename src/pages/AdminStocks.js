@@ -286,65 +286,264 @@ const AdminStocks = () => {
         <div className="debug-mode-banner">
           <p>🔧 Admin Debug Mode Enabled</p>
           <p>Using special admin token with local storage persistence.</p>
+          {/* Admin status indicator */}
+          <div style={{ 
+            marginTop: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '10px'
+          }}>
+            <div style={{ 
+              width: '12px',
+              height: '12px',
+              borderRadius: '50%',
+              backgroundColor: localStorage.getItem('isAdmin') === 'true' ? '#2ecc71' : '#e74c3c',
+              display: 'inline-block'
+            }}></div>
+            <span style={{ fontWeight: 'bold' }}>
+              Admin Status: {localStorage.getItem('isAdmin') === 'true' ? 'Active' : 'Inactive'}
+            </span>
+            <span style={{ fontSize: '12px', color: '#777' }}>
+              User ID: {localStorage.getItem('userId') || 'Unknown'}
+            </span>
+          </div>
         </div>
 
-        {message && <div className="success-message">{message}</div>}
-        {error && <div className="error-message">{error}</div>}
+        {/* Enhanced message display with auto-dismiss */}
+        {message && (
+          <div className="success-message" style={{ 
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '12px 20px',
+            backgroundColor: '#d4edda',
+            borderColor: '#c3e6cb',
+            borderRadius: '4px',
+            marginBottom: '15px'
+          }}>
+            <div>
+              <strong>Success! </strong> 
+              {message}
+            </div>
+            <button 
+              onClick={() => setMessage('')} 
+              style={{
+                background: 'none',
+                border: 'none',
+                fontSize: '16px',
+                cursor: 'pointer',
+                padding: '0 5px'
+              }}
+            >
+              ×
+            </button>
+          </div>
+        )}
+        
+        {/* Enhanced error display with details and dismissal */}
+        {error && (
+          <div className="error-message" style={{ 
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            padding: '12px 20px',
+            backgroundColor: '#f8d7da',
+            borderColor: '#f5c6cb',
+            borderRadius: '4px',
+            marginBottom: '15px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <strong>Error: </strong> 
+                {error}
+              </div>
+              <button 
+                onClick={() => setError('')} 
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '16px',
+                  cursor: 'pointer',
+                  padding: '0 5px'
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <div style={{ 
+              marginTop: '10px',
+              fontSize: '12px',
+              color: '#721c24',
+              textAlign: 'right'
+            }}>
+              <button
+                onClick={() => window.location.reload()}
+                style={{
+                  background: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  padding: '5px 10px',
+                  borderRadius: '3px',
+                  cursor: 'pointer',
+                  marginRight: '10px',
+                  fontSize: '12px'
+                }}
+              >
+                Reload Page
+              </button>
+              <span>
+                {new Date().toLocaleTimeString()}
+              </span>
+            </div>
+          </div>
+        )}
         
         <div className="admin-actions" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '15px' }}>
           <button 
             className="admin-button create-button"
             onClick={handleCreateClick}
-            style={{ flex: '1', minWidth: '150px' }}
+            style={{ 
+              flex: '1', 
+              minWidth: '150px',
+              background: 'linear-gradient(to right, #2ecc71, #27ae60)',
+              color: 'white',
+              border: 'none',
+              padding: '12px 15px',
+              borderRadius: '4px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+            }}
           >
-            Create New Stock
+            <span style={{ marginRight: '5px' }}>+</span> Create New Stock
           </button>
           
           <button 
             className="admin-button warning"
             onClick={handleResetPrices}
             disabled={loading}
-            style={{ flex: '1', minWidth: '150px', backgroundColor: '#e67e22' }}
+            style={{ 
+              flex: '1', 
+              minWidth: '150px', 
+              background: loading ? '#bdc3c7' : 'linear-gradient(to right, #e67e22, #d35400)',
+              color: 'white',
+              border: 'none',
+              padding: '12px 15px',
+              borderRadius: '4px',
+              fontWeight: 'bold',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+            }}
           >
-            {loading ? 'Processing...' : 'Reset All Prices'}
+            {loading ? (
+              <span>
+                <span style={{ display: 'inline-block', animation: 'rotation 1s infinite linear' }}>⟳</span> Processing...
+              </span>
+            ) : (
+              'Reset All Prices'
+            )}
           </button>
         </div>
 
         {loading && !stocks.length ? (
-          <p>Loading stocks...</p>
+          <div style={{
+            padding: '30px',
+            textAlign: 'center',
+            background: '#f8f9fa',
+            borderRadius: '8px'
+          }}>
+            <div style={{
+              display: 'inline-block',
+              width: '40px',
+              height: '40px',
+              border: '4px solid #f3f3f3',
+              borderTop: '4px solid #3498db',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              marginBottom: '15px'
+            }}></div>
+            <p style={{ fontSize: '18px', color: '#666' }}>Loading stocks...</p>
+            <style>{`
+              @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+              @keyframes rotation {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(359deg); }
+              }
+            `}</style>
+          </div>
         ) : (
           <div className="stock-list">
-            <table className="stock-table">
-              <thead>
+            <table className="stock-table" style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              borderRadius: '8px',
+              overflow: 'hidden'
+            }}>
+              <thead style={{ backgroundColor: '#f8f9fa' }}>
                 <tr>
-                  <th>ID</th>
-                  <th>Symbol</th>
-                  <th>Name</th>
-                  <th>Current Price</th>
-                  <th>Sector</th>
-                  <th>Volume</th>
-                  <th>Actions</th>
+                  <th style={{ padding: '12px 15px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>ID</th>
+                  <th style={{ padding: '12px 15px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Symbol</th>
+                  <th style={{ padding: '12px 15px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Name</th>
+                  <th style={{ padding: '12px 15px', textAlign: 'right', borderBottom: '1px solid #ddd' }}>Current Price</th>
+                  <th style={{ padding: '12px 15px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Sector</th>
+                  <th style={{ padding: '12px 15px', textAlign: 'right', borderBottom: '1px solid #ddd' }}>Volume</th>
+                  <th style={{ padding: '12px 15px', textAlign: 'center', borderBottom: '1px solid #ddd' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {stocks.map(stock => (
-                  <tr key={stock.id}>
-                    <td>{stock.id}</td>
-                    <td>{stock.symbol}</td>
-                    <td>{stock.name}</td>
-                    <td>${stock.current_price.toFixed(2)}</td>
-                    <td>{stock.sector || '-'}</td>
-                    <td>{stock.volume ? stock.volume.toLocaleString() : '-'}</td>
-                    <td className="action-buttons">
+                  <tr 
+                    key={stock.id}
+                    style={{ 
+                      backgroundColor: stock.price_updated ? '#f0fff4' : 'white',
+                      transition: 'background-color 0.3s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = stock.price_updated ? '#f0fff4' : 'white'}
+                  >
+                    <td style={{ padding: '12px 15px', borderBottom: '1px solid #ddd' }}>{stock.id}</td>
+                    <td style={{ padding: '12px 15px', borderBottom: '1px solid #ddd', fontWeight: 'bold' }}>{stock.symbol}</td>
+                    <td style={{ padding: '12px 15px', borderBottom: '1px solid #ddd' }}>{stock.name}</td>
+                    <td style={{ padding: '12px 15px', borderBottom: '1px solid #ddd', textAlign: 'right', color: stock.price_updated ? '#27ae60' : 'inherit' }}>
+                      ${stock.current_price.toFixed(2)}
+                      {stock.price_updated && <span style={{ marginLeft: '5px', fontSize: '10px' }}>✓</span>}
+                    </td>
+                    <td style={{ padding: '12px 15px', borderBottom: '1px solid #ddd' }}>{stock.sector || '-'}</td>
+                    <td style={{ padding: '12px 15px', borderBottom: '1px solid #ddd', textAlign: 'right' }}>
+                      {stock.volume ? stock.volume.toLocaleString() : '-'}
+                    </td>
+                    <td style={{ padding: '12px 15px', borderBottom: '1px solid #ddd', textAlign: 'center' }} className="action-buttons">
                       <button 
                         className="edit-button"
                         onClick={() => handleEditClick(stock)}
+                        style={{
+                          backgroundColor: '#3498db',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '6px 10px',
+                          marginRight: '8px',
+                          cursor: 'pointer'
+                        }}
                       >
                         Edit
                       </button>
                       <button 
                         className="delete-button"
                         onClick={() => handleDeleteClick(stock)}
+                        style={{
+                          backgroundColor: '#e74c3c',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '6px 10px',
+                          cursor: 'pointer'
+                        }}
                       >
                         Delete
                       </button>
