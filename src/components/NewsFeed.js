@@ -121,6 +121,17 @@ const NewsFeed = ({ stockId, sectorId }) => {
   const [filter, setFilter] = useState('all'); // 'all', 'market', 'sector', 'company'
   const [minImportance, setMinImportance] = useState(1); // 1-5 scale
   
+  // Helper function to consistently prepare sample data
+  const getSampleNewsItems = () => {
+    return sampleNewsItems.map(item => ({
+      ...item,
+      // Ensure published_at is a Date object for consistent rendering
+      published_at: typeof item.published_at === 'string' ? new Date(item.published_at) : item.published_at,
+      // Ensure importance exists (default to 1)
+      importance: item.importance || 1
+    }));
+  };
+  
   // Add a reload button functionality
   const reloadNews = async () => {
     if (loading) return; // Prevent multiple simultaneous loads
@@ -186,16 +197,6 @@ const NewsFeed = ({ stockId, sectorId }) => {
   // Load initial news data
   useEffect(() => {
     console.log("NewsFeed component mounted - Starting to load data");
-    const getSampleNewsItems = () => {
-    // Helper function to consistently prepare sample data
-    return sampleNewsItems.map(item => ({
-      ...item,
-      // Ensure published_at is a Date object for consistent rendering
-      published_at: typeof item.published_at === 'string' ? new Date(item.published_at) : item.published_at,
-      // Ensure importance exists (default to 1)
-      importance: item.importance || 1
-    }));
-  };
   
   const loadNews = async () => {
     try {
