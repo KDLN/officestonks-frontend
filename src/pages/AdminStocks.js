@@ -15,7 +15,8 @@ import {
   resumeStockUpdates,
   setStockPrice,
   pauseAllStockUpdates,
-  resumeAllStockUpdates
+  resumeAllStockUpdates,
+  clearStockPriceCache
 } from '../services/websocket';
 
 const AdminStocks = () => {
@@ -313,6 +314,10 @@ const AdminStocks = () => {
       console.log('Admin Stocks UI: Pausing all WebSocket stock updates before reset');
       pauseAllStockUpdates();
       
+      // Clear stock price cache before reset
+      console.log('Admin Stocks UI: Clearing stock price cache before reset');
+      clearStockPriceCache();
+      
       console.log('Admin Stocks UI: Calling resetStockPrices()');
       const result = await resetStockPrices();
       console.log('Admin Stocks UI: resetStockPrices result:', result);
@@ -329,13 +334,21 @@ const AdminStocks = () => {
         });
         
         // Refresh the stock list to show updated prices after a delay
-        setTimeout(() => {
-          fetchStocks();
+        console.log('Admin Stocks UI: Refreshing stock list after reset');
+        setTimeout(async () => {
+          await fetchStocks();
           
           // After another delay, resume WebSocket updates
           setTimeout(() => {
             console.log('Admin Stocks UI: Resuming WebSocket updates after reset complete');
             resumeAllStockUpdates();
+            
+            // Dispatch an event to notify components that stock prices have been reset
+            document.dispatchEvent(new CustomEvent('admin-stocks-reset-complete', {
+              detail: {
+                timestamp: new Date().toISOString()
+              }
+            }));
             
             // Remove the highlight class after a few seconds
             setTimeout(() => {
@@ -344,8 +357,8 @@ const AdminStocks = () => {
                 row.classList.remove('reset-highlight');
               });
             }, 3000);
-          }, 1000);
-        }, 1000);
+          }, 2000); // Longer delay before resuming updates
+        }, 2000); // Longer delay before refreshing the stock list
       }
     } catch (err) {
       console.error('Admin Stocks UI: Reset prices error:', err);

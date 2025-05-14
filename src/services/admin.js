@@ -12,7 +12,8 @@ import {
   resumeAllStockUpdates, 
   setStockPrice,
   pauseStockUpdates,
-  resumeStockUpdates
+  resumeStockUpdates,
+  clearStockPriceCache
 } from './websocket';
 
 // Use the CORS proxy URL for all admin requests
@@ -644,6 +645,10 @@ export const resetStockPrices = async () => {
     console.log('Pausing all WebSocket stock updates during price reset');
     pauseAllStockUpdates();
     
+    // IMPORTANT: Clear the stock price cache entirely before starting
+    console.log('Clearing stock price cache to prevent price history issues');
+    clearStockPriceCache();
+    
     // First attempt API call to reset prices
     let apiSuccess = false;
     let backendStocks = [];
@@ -673,6 +678,9 @@ export const resetStockPrices = async () => {
     // Reset stocks in localStorage
     let stockCount = 0;
     try {
+      // Ensure we start with a clean cache
+      console.log('Ensuring clean cache state before populating with new prices');
+      
       // If we have stocks from the backend, use those for the reset
       if (backendStocks.length > 0) {
         console.log('Using backend stocks for reset');
@@ -682,14 +690,17 @@ export const resetStockPrices = async () => {
         localStorage.setItem('mockStocksData', JSON.stringify(backendStocks));
         console.log(`Saved ${stockCount} backend stocks to localStorage`);
         
-        // Update each stock in the stockPriceCache
-        backendStocks.forEach(stock => {
+        // Update each stock in the stockPriceCache - one by one to avoid race conditions
+        // We use a new cache that was already cleared above
+        for (const stock of backendStocks) {
           if (stock && stock.id && stock.current_price) {
             setStockPrice(stock.id, stock.current_price);
+            // Small delay to prevent overwhelming the event system
+            await new Promise(resolve => setTimeout(resolve, 10)); 
           }
-        });
+        }
         
-        console.log(`Updated ${backendStocks.length} stock prices in cache from backend data`);
+        console.log(`Updated ${backendStocks.length} stock prices in clean cache from backend data`);
       } else {
         // No backend stocks available, use default stock reset
         const mockStocksJson = localStorage.getItem('mockStocksData');
@@ -718,13 +729,15 @@ export const resetStockPrices = async () => {
           localStorage.setItem('mockStocksData', JSON.stringify(resetStocks));
           console.log(`Reset prices for ${stockCount} stocks in localStorage`);
           
-          // Manually update each stock price in the cache
-          resetStocks.forEach(stock => {
+          // Manually update each stock price in the cache - one by one with small delays
+          for (const stock of resetStocks) {
             // Use setStockPrice to trigger events
             setStockPrice(stock.id, stock.current_price);
-          });
+            // Small delay to prevent overwhelming the event system
+            await new Promise(resolve => setTimeout(resolve, 10));
+          }
           
-          console.log(`Reset ${Object.keys(stockPriceCache).length} prices in stockPriceCache`);
+          console.log(`Reset ${resetStocks.length} prices in clean stock price cache`);
         } else {
           console.warn('No mockStocksData found in localStorage, nothing to reset');
         }

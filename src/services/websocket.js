@@ -542,6 +542,33 @@ export const setStockPrice = (stockId, price) => {
   }));
 };
 
+/**
+ * Clear the stock price cache entirely
+ * This is used when resetting all prices
+ */
+export const clearStockPriceCache = () => {
+  console.log('Clearing entire stock price cache');
+  
+  // Log current cache size before clearing
+  const cacheSize = Object.keys(stockPriceCache).length;
+  console.log(`Clearing ${cacheSize} cached stock prices`);
+  
+  // Clear all entries from the cache
+  for (const key in stockPriceCache) {
+    delete stockPriceCache[key];
+  }
+  
+  // Dispatch an event for components to know
+  document.dispatchEvent(new CustomEvent('stock-price-cache-cleared', {
+    detail: { 
+      previousSize: cacheSize,
+      timestamp: new Date().toISOString() 
+    }
+  }));
+  
+  console.log('Stock price cache has been cleared');
+};
+
 // React hook for WebSocket integration
 export const useWebSocket = () => {
   // Initialize WebSocket connection on component mount
@@ -572,6 +599,7 @@ export const useWebSocket = () => {
     pauseAllStockUpdates,
     resumeAllStockUpdates,
     setStockPrice,
+    clearStockPriceCache,
     isPaused: (stockId) => pausedStocks.has(stockId) || allStockUpdatesPaused,
     isAllPaused: () => allStockUpdatesPaused
   };
