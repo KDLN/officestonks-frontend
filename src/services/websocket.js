@@ -63,6 +63,12 @@ export const pausedStocks = new Set();
 // Flag to indicate if all stock updates are paused globally
 let allStockUpdatesPaused = false;
 
+// Cache invalidation timestamp - WebSocket messages older than this are ignored
+let cacheInvalidationTime = 0;
+
+// Cooldown period after reset in milliseconds (30 seconds)
+const RESET_COOLDOWN_PERIOD = 30000;
+
 // Initialize WebSocket connection
 export const initWebSocket = () => {
   if (socket) {
@@ -275,6 +281,20 @@ export const initWebSocket = () => {
       // Parse and process the message
       const message = JSON.parse(jsonStr);
       
+      // Check if we are in a post-reset cooldown period
+      const now = Date.now();
+      const isInCooldownPeriod = cacheInvalidationTime > 0 && 
+                               (now - cacheInvalidationTime) < RESET_COOLDOWN_PERIOD;
+      
+      // Completely ignore stock updates during cooldown period after reset
+      if (isInCooldownPeriod && 
+          (message.type === 'stock_update' || message.type === 'market_event' || 
+          (message.id && message.current_price))) {
+        console.log(`IGNORING WebSocket message during post-reset cooldown period (${Math.round((now - cacheInvalidationTime)/1000)}s of ${RESET_COOLDOWN_PERIOD/1000}s):`);
+        console.log(`  Message type: ${message.type}, Stock ID: ${message.stock_id || message.id}`);
+        return; // Completely skip processing this message
+      }
+      
       // Update stock price cache if it's a stock update, but only if not paused
       if (message.type === 'stock_update' || (message.id && message.current_price)) {
         const stockId = message.stock_id || message.id;
@@ -282,14 +302,21 @@ export const initWebSocket = () => {
         
         if (stockId && price) {
           // Check if this stock is currently paused
-          const isPaused = pausedStocks.has(Number(stockId)) || pausedStocks.has(String(stockId)) || allStockUpdatesPaused;
+          const isPaused = pausedStocks.has(Number(stockId)) || 
+                          pausedStocks.has(String(stockId)) || 
+                          allStockUpdatesPaused;
           
           if (isPaused) {
             console.log(`Skipping WebSocket update for paused stock ID: ${stockId}`);
           } else {
-            // If not paused, store the latest price in cache
-            stockPriceCache[stockId] = price;
-            console.log(`Updated stockPriceCache for stock ID: ${stockId}, new price: ${price}`);
+            // Make sure the price is valid - guard against extreme values that might be glitches
+            if (price <= 0 || price > 10000) {
+              console.warn(`Ignoring suspicious price update for stock ID: ${stockId}, price: ${price}`);
+            } else {
+              // If not paused and price looks reasonable, store it in cache
+              stockPriceCache[stockId] = price;
+              console.log(`Updated stockPriceCache for stock ID: ${stockId}, new price: ${price}`);
+            }
           }
         }
       }
@@ -569,6 +596,61 @@ export const clearStockPriceCache = () => {
   console.log('Stock price cache has been cleared');
 };
 
+/**
+ * Force system reset - this is a nuclear option that:
+ * 1. Clears the price cache
+ * 2. Sets a cache invalidation timestamp to ignore old WebSocket messages
+ * 3. Pauses all stock updates
+ * 4. Closes and reopens the WebSocket connection to get fresh data
+ */
+export const forceSystemReset = async () => {
+  console.log('FORCING SYSTEM RESET - NUCLEAR OPTION');
+  
+  // Step 1: Pause all updates
+  pauseAllStockUpdates();
+  
+  // Step 2: Clear price cache
+  clearStockPriceCache();
+  
+  // Step 3: Set invalidation timestamp - any WebSocket messages older than this will be ignored
+  cacheInvalidationTime = Date.now();
+  console.log(`Cache invalidation timestamp set to: ${new Date(cacheInvalidationTime).toISOString()}`);
+  console.log(`Messages older than this will be ignored for ${RESET_COOLDOWN_PERIOD/1000} seconds`);
+  
+  // Step 4: Close and reopen WebSocket connection - this is drastic but effective
+  if (socket) {
+    console.log('Closing WebSocket connection as part of system reset');
+    socket.close();
+    
+    // Wait for socket to close
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  
+  // Step 5: Reinitialize WebSocket connection
+  console.log('Reinitializing WebSocket connection');
+  initWebSocket();
+  
+  // Step 6: Resume updates after a delay
+  setTimeout(() => {
+    console.log('Resuming stock updates after system reset');
+    resumeAllStockUpdates();
+    
+    // Dispatch event
+    document.dispatchEvent(new CustomEvent('system-reset-complete', {
+      detail: {
+        timestamp: new Date().toISOString(),
+        cacheInvalidationTime: cacheInvalidationTime
+      }
+    }));
+  }, 5000); // 5 second delay
+  
+  return {
+    success: true,
+    message: 'System reset completed',
+    cacheInvalidationTime: cacheInvalidationTime
+  };
+};
+
 // React hook for WebSocket integration
 export const useWebSocket = () => {
   // Initialize WebSocket connection on component mount
@@ -600,7 +682,9 @@ export const useWebSocket = () => {
     resumeAllStockUpdates,
     setStockPrice,
     clearStockPriceCache,
+    forceSystemReset,
     isPaused: (stockId) => pausedStocks.has(stockId) || allStockUpdatesPaused,
-    isAllPaused: () => allStockUpdatesPaused
+    isAllPaused: () => allStockUpdatesPaused,
+    isInCooldown: () => (Date.now() - cacheInvalidationTime) < RESET_COOLDOWN_PERIOD
   };
 };

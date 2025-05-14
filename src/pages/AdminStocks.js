@@ -16,7 +16,8 @@ import {
   setStockPrice,
   pauseAllStockUpdates,
   resumeAllStockUpdates,
-  clearStockPriceCache
+  clearStockPriceCache,
+  forceSystemReset
 } from '../services/websocket';
 
 const AdminStocks = () => {
@@ -192,6 +193,10 @@ const AdminStocks = () => {
       console.log(`Pausing WebSocket updates for stock ID: ${stockId} during edit`);
       pauseStockUpdates(stockId);
       
+      // Clear the stock price cache to prevent old prices from reappearing
+      console.log('Clearing stock price cache before updating stock');
+      clearStockPriceCache();
+      
       const newPrice = parseFloat(formData.current_price);
       
       // Update the stock in the database/localStorage
@@ -208,7 +213,9 @@ const AdminStocks = () => {
       console.log(`Manually updating stock price for ID: ${stockId} to ${newPrice}`);
       setStockPrice(stockId, newPrice);
       
-      // Resume WebSocket updates for this stock after a short delay
+      // Use a longer delay before resuming updates to ensure the change is properly registered
+      // and prevent WebSocket events from immediately overriding our changes
+      console.log(`Scheduled resume of WebSocket updates for stock ID: ${stockId} after 5 seconds`);
       setTimeout(() => {
         console.log(`Resuming WebSocket updates for stock ID: ${stockId} after edit`);
         resumeStockUpdates(stockId);
@@ -221,7 +228,7 @@ const AdminStocks = () => {
             timestamp: new Date().toISOString()
           }
         }));
-      }, 1000); // Use a longer delay to allow UI to update
+      }, 5000); // Use a much longer delay to ensure WebSocket events don't override our changes
       
       setMessage('Stock updated successfully');
       setShowModal(false);
@@ -243,6 +250,10 @@ const AdminStocks = () => {
     setLoading(true);
     
     try {
+      // Pause all WebSocket updates during stock creation
+      console.log('Pausing all WebSocket updates during stock creation');
+      pauseAllStockUpdates();
+      
       const initialPrice = parseFloat(formData.current_price);
       
       // Create the stock in the database/localStorage
@@ -257,18 +268,43 @@ const AdminStocks = () => {
       
       // If we got the ID of the new stock, set its price in the WebSocket cache
       if (newStock && newStock.id) {
-        console.log(`Setting initial price for new stock ID: ${newStock.id} to ${initialPrice}`);
-        setStockPrice(newStock.id, initialPrice);
+        const newStockId = newStock.id;
+        
+        // Pause updates specifically for this new stock
+        console.log(`Pausing WebSocket updates for new stock ID: ${newStockId}`);
+        pauseStockUpdates(newStockId);
+        
+        // Set the initial price in the WebSocket cache
+        console.log(`Setting initial price for new stock ID: ${newStockId} to ${initialPrice}`);
+        setStockPrice(newStockId, initialPrice);
           
         // Dispatch a custom event for components to know a new stock was created
         document.dispatchEvent(new CustomEvent('stock-created', {
           detail: {
-            stockId: newStock.id,
+            stockId: newStockId,
             symbol: formData.symbol,
             price: initialPrice,
             timestamp: new Date().toISOString()
           }
         }));
+        
+        // Resume all updates after a delay, but keep the specific stock paused longer
+        setTimeout(() => {
+          console.log('Resuming all WebSocket updates after stock creation');
+          resumeAllStockUpdates();
+          
+          // Resume the specific stock updates after an additional delay
+          setTimeout(() => {
+            console.log(`Resuming WebSocket updates for new stock ID: ${newStockId}`);
+            resumeStockUpdates(newStockId);
+          }, 3000); // Additional 3 second delay for the new stock
+        }, 2000); // 2 second delay for all other stocks
+      } else {
+        // If we didn't get a stock ID, just resume all updates
+        setTimeout(() => {
+          console.log('Resuming all WebSocket updates after stock creation');
+          resumeAllStockUpdates();
+        }, 2000);
       }
       
       setMessage('Stock created successfully');
@@ -276,6 +312,12 @@ const AdminStocks = () => {
       fetchStocks(); // Refresh stock list
     } catch (err) {
       setError(`Failed to create stock: ${err.message}`);
+      
+      // Make sure to resume all WebSocket updates even if there was an error
+      setTimeout(() => {
+        console.log('Resuming all WebSocket updates after error');
+        resumeAllStockUpdates();
+      }, 1000);
     } finally {
       setLoading(false);
     }
@@ -310,14 +352,17 @@ const AdminStocks = () => {
     setError('');
     
     try {
-      // First, pause all WebSocket updates to prevent flickering during reset
-      console.log('Admin Stocks UI: Pausing all WebSocket stock updates before reset');
-      pauseAllStockUpdates();
+      // Use the nuclear option to completely reset the WebSocket system
+      console.log('Admin Stocks UI: Using nuclear option to force system reset');
       
-      // Clear stock price cache before reset
-      console.log('Admin Stocks UI: Clearing stock price cache before reset');
-      clearStockPriceCache();
+      // Use forceSystemReset from imports
       
+      // Execute the nuclear reset option
+      console.log('Admin Stocks UI: Executing forceSystemReset()');
+      const resetResult = await forceSystemReset();
+      console.log('Admin Stocks UI: forceSystemReset result:', resetResult);
+      
+      // After the system is reset, call resetStockPrices
       console.log('Admin Stocks UI: Calling resetStockPrices()');
       const result = await resetStockPrices();
       console.log('Admin Stocks UI: resetStockPrices result:', result);
@@ -325,7 +370,7 @@ const AdminStocks = () => {
       if (result && result.error) {
         setError(result.message || 'Failed to reset stock prices');
       } else {
-        setMessage(result?.message || 'Stock prices have been reset successfully.');
+        setMessage(result?.message || 'Stock prices have been reset successfully. WebSocket system has been completely reset.');
         
         // Add a special class to highlight reset stocks when they come back
         const stockRows = document.querySelectorAll('.stock-table tbody tr');
@@ -333,32 +378,28 @@ const AdminStocks = () => {
           row.classList.add('reset-highlight');
         });
         
-        // Refresh the stock list to show updated prices after a delay
+        // Refresh the stock list to show updated prices after a longer delay
+        // to ensure the reset has completed
         console.log('Admin Stocks UI: Refreshing stock list after reset');
         setTimeout(async () => {
           await fetchStocks();
           
-          // After another delay, resume WebSocket updates
+          // Dispatch an event to notify components that stock prices have been reset
+          document.dispatchEvent(new CustomEvent('admin-stocks-reset-complete', {
+            detail: {
+              timestamp: new Date().toISOString(),
+              nuclearReset: true
+            }
+          }));
+          
+          // Remove the highlight class after a few seconds
           setTimeout(() => {
-            console.log('Admin Stocks UI: Resuming WebSocket updates after reset complete');
-            resumeAllStockUpdates();
-            
-            // Dispatch an event to notify components that stock prices have been reset
-            document.dispatchEvent(new CustomEvent('admin-stocks-reset-complete', {
-              detail: {
-                timestamp: new Date().toISOString()
-              }
-            }));
-            
-            // Remove the highlight class after a few seconds
-            setTimeout(() => {
-              const stockRows = document.querySelectorAll('.stock-table tbody tr');
-              stockRows.forEach(row => {
-                row.classList.remove('reset-highlight');
-              });
-            }, 3000);
-          }, 2000); // Longer delay before resuming updates
-        }, 2000); // Longer delay before refreshing the stock list
+            const stockRows = document.querySelectorAll('.stock-table tbody tr');
+            stockRows.forEach(row => {
+              row.classList.remove('reset-highlight');
+            });
+          }, 3000);
+        }, 3000); // Longer delay before refreshing the stock list
       }
     } catch (err) {
       console.error('Admin Stocks UI: Reset prices error:', err);
