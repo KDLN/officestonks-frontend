@@ -198,7 +198,12 @@ const AdminStocks = () => {
       console.log('Clearing stock price cache before updating stock');
       clearStockPriceCache();
       
-      const newPrice = parseFloat(formData.current_price);
+      // Ensure price is at least $1.00 (minimum enforced by backend)
+      let newPrice = parseFloat(formData.current_price);
+      if (newPrice < 1.00) {
+        console.warn('Adjusting price to minimum $1.00 threshold');
+        newPrice = 1.00;
+      }
       
       // Update the stock in the database/localStorage
       await adminUpdateStock(stockId, {
@@ -235,7 +240,28 @@ const AdminStocks = () => {
       setShowModal(false);
       fetchStocks(); // Refresh stock list
     } catch (err) {
-      setError(`Failed to update stock: ${err.message}`);
+      // Try to extract more specific error message if available
+      let errorMessage = 'Failed to update stock';
+      
+      try {
+        // Check if the error contains JSON with more details
+        const errorData = JSON.parse(err.message);
+        if (errorData.userMessage) {
+          // Use the user-friendly message if available
+          errorMessage = errorData.userMessage;
+        } else if (errorData.body) {
+          // Use the body content if available
+          errorMessage = `${errorMessage}: ${errorData.body}`;
+        } else {
+          // Otherwise use the standard message
+          errorMessage = `${errorMessage}: ${err.message}`;
+        }
+      } catch (e) {
+        // If JSON parsing fails, use the standard error message
+        errorMessage = `${errorMessage}: ${err.message}`;
+      }
+      
+      setError(errorMessage);
       
       // Make sure to resume stock updates even if there was an error
       console.log(`Resuming WebSocket updates for stock ID: ${editingStock.id} after error`);
@@ -255,7 +281,12 @@ const AdminStocks = () => {
       console.log('Pausing all WebSocket updates during stock creation');
       pauseAllStockUpdates();
       
-      const initialPrice = parseFloat(formData.current_price);
+      // Ensure price is at least $1.00 (minimum enforced by backend)
+      let initialPrice = parseFloat(formData.current_price);
+      if (initialPrice < 1.00) {
+        console.warn('Adjusting price to minimum $1.00 threshold');
+        initialPrice = 1.00;
+      }
       
       // Create the stock in the database/localStorage
       const newStock = await adminCreateStock({
@@ -312,7 +343,28 @@ const AdminStocks = () => {
       setShowCreateModal(false);
       fetchStocks(); // Refresh stock list
     } catch (err) {
-      setError(`Failed to create stock: ${err.message}`);
+      // Try to extract more specific error message if available
+      let errorMessage = 'Failed to create stock';
+      
+      try {
+        // Check if the error contains JSON with more details
+        const errorData = JSON.parse(err.message);
+        if (errorData.userMessage) {
+          // Use the user-friendly message if available
+          errorMessage = errorData.userMessage;
+        } else if (errorData.body) {
+          // Use the body content if available
+          errorMessage = `${errorMessage}: ${errorData.body}`;
+        } else {
+          // Otherwise use the standard message
+          errorMessage = `${errorMessage}: ${err.message}`;
+        }
+      } catch (e) {
+        // If JSON parsing fails, use the standard error message
+        errorMessage = `${errorMessage}: ${err.message}`;
+      }
+      
+      setError(errorMessage);
       
       // Make sure to resume all WebSocket updates even if there was an error
       setTimeout(() => {
@@ -402,7 +454,29 @@ const AdminStocks = () => {
       }
     } catch (err) {
       console.error('Admin Stocks UI: Reset prices error:', err);
-      setError(`Failed to reset stock prices: ${err.message}`);
+      
+      // Try to extract more specific error message if available
+      let errorMessage = 'Failed to reset stock prices';
+      
+      try {
+        // Check if the error contains JSON with more details
+        const errorData = JSON.parse(err.message);
+        if (errorData.userMessage) {
+          // Use the user-friendly message if available
+          errorMessage = errorData.userMessage;
+        } else if (errorData.body) {
+          // Use the body content if available
+          errorMessage = `${errorMessage}: ${errorData.body}`;
+        } else {
+          // Otherwise use the standard message
+          errorMessage = `${errorMessage}: ${err.message}`;
+        }
+      } catch (e) {
+        // If JSON parsing fails, use the standard error message
+        errorMessage = `${errorMessage}: ${err.message}`;
+      }
+      
+      setError(errorMessage);
       
       // Always make sure to resume WebSocket updates if there's an error
       console.log('Admin Stocks UI: Resuming WebSocket updates after error');
@@ -804,10 +878,13 @@ const AdminStocks = () => {
                   name="current_price"
                   value={formData.current_price}
                   onChange={handleInputChange}
-                  min="0.01"
+                  min="1.00"
                   step="0.01"
                   required
                 />
+                <small style={{ display: 'block', marginTop: '5px', color: '#666' }}>
+                  Minimum price: $1.00 (enforced by backend)
+                </small>
               </div>
 
               <div className="form-group">
@@ -905,10 +982,13 @@ const AdminStocks = () => {
                   name="current_price"
                   value={formData.current_price}
                   onChange={handleInputChange}
-                  min="0.01"
+                  min="1.00"
                   step="0.01"
                   required
                 />
+                <small style={{ display: 'block', marginTop: '5px', color: '#666' }}>
+                  Minimum price: $1.00 (enforced by backend)
+                </small>
               </div>
 
               <div className="form-group">

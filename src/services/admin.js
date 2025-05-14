@@ -359,6 +359,7 @@ export const debugAdminToken = async () => {
 /**
  * Make a direct fetch request to admin endpoint with multiple fallbacks
  * Enhanced with better error handling, timeouts, and diagnostics
+ * Updated to handle more specific price-related error messages from backend
  */
 const directAdminFetch = async (endpoint, options = {}, mockResponse = null) => {
   // Initialize mock data if needed
@@ -418,6 +419,15 @@ const directAdminFetch = async (endpoint, options = {}, mockResponse = null) => 
         try {
           const errorBody = await response.text();
           errorResponse.body = errorBody;
+          
+          // Check for specific price-related error messages
+          if (errorBody.includes('price') && errorBody.includes('minimum')) {
+            // For price-related errors, create a more user-friendly message
+            errorResponse.userMessage = 'Stock price cannot be below $1.00 minimum required by the system';
+          } else if (errorBody.includes('price')) {
+            // Generic price error
+            errorResponse.userMessage = 'Invalid price value: ' + errorBody;
+          }
         } catch (e) {
           errorResponse.bodyError = e.message;
         }
@@ -452,9 +462,16 @@ const directAdminFetch = async (endpoint, options = {}, mockResponse = null) => 
     const token = getAdminToken();
     const fetchUrl = `${ADMIN_API_URL}/api/${cleanEndpoint}`;
     
+    // Ensure Origin header is set for CORS
+    const origin = window.location.origin;
+    
     console.log('Using admin API URL for request:', ADMIN_API_URL);
     console.log(`Direct admin fetch to: ${fetchUrl}`);
-    console.log(`Request details: Origin=${window.location.origin}, Method=${options.method || 'GET'}`);
+    console.log(`Request details: Origin=${origin}, Method=${options.method || 'GET'}`);
+    
+    // Log if we're using the local development server or remote deployment
+    const isLocalDevelopment = origin.includes('localhost') || origin.includes('127.0.0.1');
+    console.log(`Using ${isLocalDevelopment ? 'local development' : 'remote deployment'} mode for CORS`);
     
     // First attempt with standard headers
     const firstAttemptResult = await attemptFetchWithTimeout(
@@ -464,6 +481,7 @@ const directAdminFetch = async (endpoint, options = {}, mockResponse = null) => 
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
+          'Origin': origin, // Explicitly set Origin header for CORS
           ...options.headers
         },
         credentials: 'omit', // Don't send cookies to avoid CORS issues
@@ -495,6 +513,7 @@ const directAdminFetch = async (endpoint, options = {}, mockResponse = null) => 
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
+          'Origin': origin, // Explicitly set Origin header for CORS
           'X-Requested-With': 'XMLHttpRequest', // Helps with some CORS setups
         },
         credentials: 'omit',
@@ -520,13 +539,22 @@ const directAdminFetch = async (endpoint, options = {}, mockResponse = null) => 
       method: options.method || 'GET',
       userId,
       isAdminUser,
-      origin: window.location.origin,
+      origin,
       adminApiUrl: ADMIN_API_URL,
       attemptsMade: attemptCount,
       elapsedTime: Date.now() - startTime,
       userAgent: navigator.userAgent,
       connectionType: navigator.connection ? navigator.connection.effectiveType : 'unknown'
     });
+    
+    // Additional CORS-specific debugging
+    if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
+      console.error('CORS ISSUE DETECTED: This may be a CORS preflight issue with OPTIONS requests');
+      console.error('Use the CORS proxy for this endpoint: ' + ADMIN_API_URL);
+      console.error('For remote deployments, ensure the Origin header is being sent with the request');
+      console.error('Expected origin header value:', origin);
+      console.error('The CORS proxy should be accepting this origin: Check the proxy-server.js allowedOrigins list');
+    }
     
     // 3. Fall back to mock data
     console.log('Falling back to mock data response after all attempts failed');
@@ -654,8 +682,10 @@ export const resetStockPrices = async () => {
     let apiSuccess = false;
     let backendStocks = [];
     try {
-      // Try direct fetch to admin stocks reset endpoint with force parameter
-      const result = await directAdminFetch('admin/stocks/reset?force=true', {});
+      // Try direct fetch to admin stocks reset endpoint with confirm parameter (POST method)
+      const result = await directAdminFetch('admin/stocks/reset?confirm=true', {
+        method: 'POST'
+      });
       console.log('API reset stock prices result:', result);
       apiSuccess = true;
       
@@ -720,11 +750,23 @@ export const resetStockPrices = async () => {
           };
   
           // Reset the prices (use default prices for known symbols, or set to 100 for custom stocks)
-          const resetStocks = stocks.map(stock => ({
-            ...stock,
-            current_price: defaultPrices[stock.symbol] || 100.00,
-            reset_date: new Date().toISOString()
-          }));
+          // Ensure all prices are at least $1.00 (minimum enforced by backend)
+          const resetStocks = stocks.map(stock => {
+            // Get price from defaults or use 100.00
+            let price = defaultPrices[stock.symbol] || 100.00;
+            
+            // Enforce $1.00 minimum price
+            if (price < 1.00) {
+              console.warn(`Stock ${stock.symbol} had price below minimum threshold, adjusting to $1.00`);
+              price = 1.00;
+            }
+            
+            return {
+              ...stock,
+              current_price: price,
+              reset_date: new Date().toISOString()
+            };
+          });
           
           // Save updated stocks to localStorage
           localStorage.setItem('mockStocksData', JSON.stringify(resetStocks));
@@ -1119,6 +1161,12 @@ export const adminCreateStock = async (stockData) => {
     const maxId = mockStocks.reduce((max, stock) => Math.max(max, stock.id || 0), 0);
     const newId = maxId + 1;
     
+    // Enforce minimum price of $1.00
+    if (stockData.current_price && stockData.current_price < 1.00) {
+      console.warn(`New stock price ${stockData.current_price} is below minimum threshold, adjusting to $1.00`);
+      stockData.current_price = 1.00;
+    }
+    
     // Create new stock with ID and timestamp
     const newStock = {
       ...stockData,
@@ -1183,6 +1231,12 @@ export const adminUpdateStock = async (stockId, stockData) => {
     }
     
     // Update the stock
+    // Enforce minimum price of $1.00
+    if (stockData.current_price && stockData.current_price < 1.00) {
+      console.warn(`Stock price ${stockData.current_price} is below minimum threshold, adjusting to $1.00`);
+      stockData.current_price = 1.00;
+    }
+    
     const updatedStock = {
       ...mockStocks[stockIndex],
       ...stockData,

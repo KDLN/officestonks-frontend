@@ -141,7 +141,8 @@ export const getAllUsers = async () => {
 export const resetStockPrices = async () => {
   return withMockFallback(
     async () => {
-      return await adminClient.post(ENDPOINTS.RESET_STOCKS);
+      // Updated to use POST method with confirm=true parameter
+      return await adminClient.post(`${ENDPOINTS.RESET_STOCKS}?confirm=true`);
     },
     () => {
       const mockData = getMockData();
