@@ -6,6 +6,14 @@
 import { getToken, getUserId } from './auth';
 import { fetchWithFallback } from '../utils/http';
 import { ENDPOINTS, API_URL } from '../config/api';
+import { 
+  stockPriceCache, 
+  pauseAllStockUpdates, 
+  resumeAllStockUpdates, 
+  setStockPrice,
+  pauseStockUpdates,
+  resumeStockUpdates
+} from './websocket';
 
 // Use the CORS proxy URL for all admin requests
 const ADMIN_API_URL = process.env.REACT_APP_ADMIN_API_URL || 'https://officestonks-proxy-production.up.railway.app';
@@ -629,14 +637,8 @@ export const resetStockPrices = async () => {
   try {
     console.log('Resetting stock prices...');
 
-    // Import WebSocket utilities and pause all stock updates during the reset
-    const websocketModule = require('./websocket');
-    const { 
-      stockPriceCache, 
-      pauseAllStockUpdates, 
-      resumeAllStockUpdates,
-      setStockPrice 
-    } = websocketModule;
+    // Check if we need to get backend stock data from API first
+    const shouldUseBackendStocks = localStorage.getItem('useBackendStocks') === 'true';
     
     // Pause all WebSocket stock updates during the reset operation
     console.log('Pausing all WebSocket stock updates during price reset');
@@ -644,11 +646,25 @@ export const resetStockPrices = async () => {
     
     // First attempt API call to reset prices
     let apiSuccess = false;
+    let backendStocks = [];
     try {
       // Try direct fetch to admin stocks reset endpoint with force parameter
       const result = await directAdminFetch('admin/stocks/reset?force=true', {});
       console.log('API reset stock prices result:', result);
       apiSuccess = true;
+      
+      // If we successfully contacted the API, try to get the latest stock data
+      if (shouldUseBackendStocks) {
+        try {
+          const stocksResult = await directAdminFetch('stocks', {});
+          if (Array.isArray(stocksResult)) {
+            backendStocks = stocksResult;
+            console.log(`Fetched ${backendStocks.length} stocks from backend API`);
+          }
+        } catch (stocksError) {
+          console.warn('Failed to fetch stocks from backend:', stocksError);
+        }
+      }
     } catch (apiError) {
       console.warn('API reset failed, using mock reset:', apiError);
     }
@@ -657,47 +673,61 @@ export const resetStockPrices = async () => {
     // Reset stocks in localStorage
     let stockCount = 0;
     try {
-      const mockStocksJson = localStorage.getItem('mockStocksData');
-      if (mockStocksJson) {
-        // Parse the existing stocks
-        const stocks = JSON.parse(mockStocksJson);
-        stockCount = stocks.length;
+      // If we have stocks from the backend, use those for the reset
+      if (backendStocks.length > 0) {
+        console.log('Using backend stocks for reset');
+        stockCount = backendStocks.length;
         
-        // Reset each stock to its original price
-        const defaultPrices = {
-          "AAPL": 175.34,
-          "MSFT": 320.45,
-          "AMZN": 128.95,
-          "GOOGL": 145.60,
-          "FB": 302.75
-        };
-
-        // Reset the prices (use default prices for known symbols, or set to 100 for custom stocks)
-        const resetStocks = stocks.map(stock => ({
-          ...stock,
-          current_price: defaultPrices[stock.symbol] || 100.00,
-          reset_date: new Date().toISOString()
-        }));
+        // Save the backend stocks to localStorage
+        localStorage.setItem('mockStocksData', JSON.stringify(backendStocks));
+        console.log(`Saved ${stockCount} backend stocks to localStorage`);
         
-        // Save updated stocks to localStorage
-        localStorage.setItem('mockStocksData', JSON.stringify(resetStocks));
-        console.log(`Reset prices for ${stockCount} stocks in localStorage`);
+        // Update each stock in the stockPriceCache
+        backendStocks.forEach(stock => {
+          if (stock && stock.id && stock.current_price) {
+            setStockPrice(stock.id, stock.current_price);
+          }
+        });
         
-        // Manually update each stock price in the cache
-        if (stockPriceCache) {
-          resetStocks.forEach(stock => {
-            // Use the setStockPrice function to trigger an event
-            if (setStockPrice) {
-              setStockPrice(stock.id, stock.current_price);
-            } else {
-              // Fallback if setStockPrice isn't available
-              stockPriceCache[stock.id] = stock.current_price;
-            }
-          });
-          console.log(`Reset ${Object.keys(stockPriceCache).length} prices in stockPriceCache`);
-        }
+        console.log(`Updated ${backendStocks.length} stock prices in cache from backend data`);
       } else {
-        console.warn('No mockStocksData found in localStorage, nothing to reset');
+        // No backend stocks available, use default stock reset
+        const mockStocksJson = localStorage.getItem('mockStocksData');
+        if (mockStocksJson) {
+          // Parse the existing stocks
+          const stocks = JSON.parse(mockStocksJson);
+          stockCount = stocks.length;
+          
+          // Reset each stock to its original price
+          const defaultPrices = {
+            "AAPL": 175.34,
+            "MSFT": 320.45,
+            "AMZN": 128.95,
+            "GOOGL": 145.60,
+            "FB": 302.75
+          };
+  
+          // Reset the prices (use default prices for known symbols, or set to 100 for custom stocks)
+          const resetStocks = stocks.map(stock => ({
+            ...stock,
+            current_price: defaultPrices[stock.symbol] || 100.00,
+            reset_date: new Date().toISOString()
+          }));
+          
+          // Save updated stocks to localStorage
+          localStorage.setItem('mockStocksData', JSON.stringify(resetStocks));
+          console.log(`Reset prices for ${stockCount} stocks in localStorage`);
+          
+          // Manually update each stock price in the cache
+          resetStocks.forEach(stock => {
+            // Use setStockPrice to trigger events
+            setStockPrice(stock.id, stock.current_price);
+          });
+          
+          console.log(`Reset ${Object.keys(stockPriceCache).length} prices in stockPriceCache`);
+        } else {
+          console.warn('No mockStocksData found in localStorage, nothing to reset');
+        }
       }
     } catch (e) {
       console.error('Error resetting localStorage stocks:', e);
@@ -709,9 +739,12 @@ export const resetStockPrices = async () => {
     mockData.resetCount = (mockData.resetCount || 0) + 1;
     saveMockData(mockData);
     
-    // Resume all WebSocket stock updates after reset is complete
-    console.log('Resuming all WebSocket stock updates after price reset');
-    setTimeout(() => {
+    // Resume all WebSocket stock updates after reset is complete with longer delay
+    console.log('Scheduling resume of WebSocket updates in 3 seconds...');
+    
+    // Use a much longer delay to ensure all operations are complete
+    const resumeTimeout = setTimeout(() => {
+      console.log('Resuming all WebSocket stock updates after price reset');
       resumeAllStockUpdates();
       
       // Dispatch a custom event for components to know prices were reset
@@ -722,7 +755,9 @@ export const resetStockPrices = async () => {
           apiSuccess
         }
       }));
-    }, 1000); // Small delay to allow UI to update
+
+      console.log('Stock updates resumed');
+    }, 3000); // Longer delay to ensure all operations complete
     
     // Return success result
     return { 
@@ -737,11 +772,8 @@ export const resetStockPrices = async () => {
     
     // Make sure to resume stock updates even if there was an error
     try {
-      const { resumeAllStockUpdates } = require('./websocket');
-      if (resumeAllStockUpdates) {
-        console.log('Resuming all WebSocket stock updates after error');
-        resumeAllStockUpdates();
-      }
+      console.log('Resuming all WebSocket stock updates after error');
+      resumeAllStockUpdates();
     } catch (e) {
       console.error('Failed to resume stock updates:', e);
     }

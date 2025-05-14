@@ -397,3 +397,17 @@
     overflow-x: auto;
   }
 }
+/* Animation for stock price reset */
+@keyframes highlightPulse {
+  0% { background-color: rgba(46, 204, 113, 0.1); }
+  50% { background-color: rgba(46, 204, 113, 0.3); }
+  100% { background-color: rgba(46, 204, 113, 0.1); }
+}
+
+.reset-highlight {
+  animation: highlightPulse 1.5s ease-in-out infinite;
+}
+
+.stock-table tr.reset-highlight:hover {
+  background-color: rgba(46, 204, 113, 0.2) \!important;
+}
