@@ -3,27 +3,19 @@
  * Handles admin-specific API interactions with fallbacks to mock data
  */
 
-import { getToken, getUserId } from './auth';
-import { fetchWithFallback } from '../utils/http';
-import { ENDPOINTS, API_URL } from '../config/api';
+import { getUserId } from './auth';
+import { API_URL } from '../config/api';
 import { 
-  stockPriceCache, 
   pauseAllStockUpdates, 
   resumeAllStockUpdates, 
   setStockPrice,
-  pauseStockUpdates,
-  resumeStockUpdates,
   clearStockPriceCache,
   forceSystemReset
 } from './websocket';
 
-// Use the CORS proxy URL for all admin requests
-const ADMIN_API_URL = process.env.REACT_APP_ADMIN_API_URL || 'https://officestonks-proxy-production.up.railway.app';
-console.log('======= ADMIN API URL SET TO:', ADMIN_API_URL, '=======');
-// Force admin requests through the CORS proxy
-console.log('Admin requests will use the CORS proxy to avoid preflight issues');
-// Log a debug message to help track CORS issues
-console.log('Admin requests require special handling through the CORS proxy');
+// Use the regular API URL for admin requests
+const ADMIN_API_URL = API_URL;
+console.log('Admin API URL:', ADMIN_API_URL);
 
 // Perform sanity check on admin API URL to ensure it's valid
 (function validateAdminApiUrl() {

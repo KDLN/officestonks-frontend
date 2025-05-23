@@ -6,8 +6,8 @@
 // Detect if we're running in localhost
 export const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-// Primary backend API URL pointing directly to backend - hardcoded to fix deployment issues
-export const BACKEND_URL = 'https://officestonks-proxy-production.up.railway.app';
+// Primary backend API URL
+export const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://officestonks-production.up.railway.app';
 
 // API route base - Define without trailing slash to ensure predictable path construction
 export const API_URL = isLocalhost ? '/api' : `${BACKEND_URL}/api`;
@@ -15,18 +15,14 @@ export const API_URL = isLocalhost ? '/api' : `${BACKEND_URL}/api`;
 // Debug API URL construction
 console.log('API URL constructed:', API_URL);
 
-// CORS proxy configuration - used for admin functionality
-export const CORS_PROXY_URL = process.env.REACT_APP_CORS_PROXY_URL || 'https://officestonks-proxy-production.up.railway.app';
-
-// WebSocket URL - use the CORS proxy explicitly
-export const WS_URL = CORS_PROXY_URL.replace(/^http/, 'ws') + '/ws';
+// WebSocket URL - connect directly to backend
+export const WS_URL = BACKEND_URL.replace(/^http/, 'ws') + '/ws';
 
 // Log configuration
 console.log('API Config:', {
   isLocalhost,
   BACKEND_URL,
   API_URL,
-  CORS_PROXY_URL,
   WS_URL
 });
 

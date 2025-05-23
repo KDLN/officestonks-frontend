@@ -87,19 +87,11 @@ export const initWebSocket = () => {
     return;
   }
 
-  // Use correct CORS proxy URL for WebSocket connection
-  // Try different URLs in development mode
-  let proxyUrl = 'https://officestonks-proxy-production.up.railway.app';
+  // Import WS_URL and BACKEND_URL from config
+  const { WS_URL, BACKEND_URL } = await import('../config/api');
   
-  // Check if we're in development (localhost)
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    // DEVELOPMENT: Try with local CORS proxy if hosted
-    if (window.location.port === '3000' && process.env.REACT_APP_USE_LOCAL_PROXY === 'true') {
-      proxyUrl = 'http://localhost:3001';
-    }
-  }
-
-  console.log('Using proxy URL:', proxyUrl);
+  console.log('Using WebSocket URL:', WS_URL);
+  console.log('Using Backend URL:', BACKEND_URL);
   
   // Add visible WebSocket connection status indicator to the page
   let wsStatusIndicator = document.getElementById('ws-status-indicator');
@@ -129,7 +121,7 @@ export const initWebSocket = () => {
   wsStatusIndicator.dataset.status = 'connecting';
 
   // Check API health directly - this helps verify proxy connectivity
-  console.log('Checking API health through proxy');
+  console.log('Checking API health');
   
   // Use Promise.race to add a timeout to the health check
   const fetchWithTimeout = (url, options, timeout = 3000) => {
@@ -146,7 +138,7 @@ export const initWebSocket = () => {
     try {
       // First try: Main health endpoint
       console.log('Trying main health endpoint');
-      const mainResponse = await fetchWithTimeout(`${proxyUrl}/health`, {
+      const mainResponse = await fetchWithTimeout(`${BACKEND_URL}/health`, {
         method: 'GET',
         mode: 'cors',
         headers: { 'Accept': 'application/json' }
@@ -162,7 +154,7 @@ export const initWebSocket = () => {
       try {
         // Second try: Alternative health endpoint
         console.log('Trying alternative health endpoint');
-        const altResponse = await fetchWithTimeout(`${proxyUrl}/api/health-check`, {
+        const altResponse = await fetchWithTimeout(`${BACKEND_URL}/api/health-check`, {
           method: 'GET',
           mode: 'cors',
           headers: { 'Accept': 'application/json' }
@@ -225,7 +217,7 @@ export const initWebSocket = () => {
     });
 
   // Create the WebSocket URL with proxy URL
-  const wsUrl = `${proxyUrl.replace(/^http/, 'ws')}/ws?token=${token}`;
+  const wsUrl = `${WS_URL}?token=${token}`;
   wsStatusIndicator.dataset.url = wsUrl;
 
   // Log the URL to verify it's correct
